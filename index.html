@@ -256,6 +256,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
             <div class="field"><span class="label">아바타 크기 (px)</span><input class="input" id="avatarSize" type="number" min="24" max="96" step="1" value="42"></div>
           </div>
           <div class="field" style="margin-top:12px"><span class="label">아바타</span><div class="segmented" id="avatarVisibility"><button type="button" class="active" data-avatar-visibility="show">표시</button><button type="button" data-avatar-visibility="hide">숨김</button></div></div>
+          <div class="field" style="margin-top:12px" id="nameMaskField"><span class="label">화자 이름</span><div class="segmented" id="nameMaskMode"><button type="button" class="active" data-name-mask="show">표시</button><button type="button" data-name-mask="mask">▒로 가리기</button></div><details class="name-mask-exceptions hidden" id="nameMaskExceptions"><summary>예외 화자 <span id="nameMaskExceptionCount">0</span></summary><div class="name-mask-speaker-checks" id="nameMaskSpeakerChecks"></div></details></div>
           <div class="field" style="margin-top:12px"><span class="label">행간</span><input class="input" id="lineHeight" type="number" min="1.1" max="2.4" step="0.05" value="1.65"></div>
           <div class="field-row" style="margin-top:12px">
             <div class="field"><span class="label">배경색</span><div class="color-row"><input class="color-input" id="bgColor" type="color" value="#f5f6f8"><input class="input" id="bgColorText" value="#f5f6f8" maxlength="7"></div></div>
@@ -2531,16 +2532,156 @@ function injectV24Styles(){
 }
 function setupV24Controls(){injectV24Styles();ensureGenericRulePanel();renderGenericRulePanel()}
 
+
+
+/* ==== v25 speaker name anonymization ==== */
+DEFAULT_STATE.version=25;
+DEFAULT_STATE.settings={...DEFAULT_STATE.settings,maskSpeakerNames:false,maskExemptSpeakerKeys:[]};
+const v24EnsureSettings=ensureSettings;
+ensureSettings=function(){
+  v24EnsureSettings();
+  if(typeof state.settings.maskSpeakerNames!=='boolean')state.settings.maskSpeakerNames=false;
+  if(!Array.isArray(state.settings.maskExemptSpeakerKeys))state.settings.maskExemptSpeakerKeys=[];
+  state.settings.maskExemptSpeakerKeys=[...new Set(state.settings.maskExemptSpeakerKeys.map(x=>String(x||'').trim()).filter(Boolean))];
+};
+function maskSpeakerKey(name=''){return profileKey(String(name||''))}
+function isSpeakerMaskExempt(name=''){
+  ensureSettings();
+  return state.settings.maskExemptSpeakerKeys.includes(maskSpeakerKey(name));
+}
+function displaySpeakerName(name='알 수 없음'){
+  const raw=String(name||'알 수 없음');
+  ensureSettings();
+  if(!state.settings.maskSpeakerNames||isSpeakerMaskExempt(raw))return raw;
+  return '▒▒▒▒';
+}
+function displaySpeakerMember(member){
+  const m=member||{name:'알 수 없음',color:'#777777',avatar:''};
+  return {...m,name:displaySpeakerName(m.name)};
+}
+function syncNameMaskControls(){
+  ensureSettings();
+  const enabled=Boolean(state.settings.maskSpeakerNames);
+  $$('#nameMaskMode [data-name-mask]').forEach(button=>button.classList.toggle('active',(button.dataset.nameMask==='mask')===enabled));
+  const details=$('#nameMaskExceptions');if(details)details.classList.toggle('hidden',!enabled);
+  const box=$('#nameMaskSpeakerChecks');if(!box)return;
+  const validKeys=new Set(state.members.map(m=>maskSpeakerKey(m.name)));
+  const selected=state.settings.maskExemptSpeakerKeys.filter(key=>validKeys.has(key));
+  const selectedSet=new Set(selected);
+  if(!state.members.length)box.innerHTML='<div class="name-mask-empty">화자 없음</div>';
+  else box.innerHTML=state.members.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(m=>{
+    const key=maskSpeakerKey(m.name);
+    return `<label class="name-mask-chip"><input type="checkbox" value="${escapeHTML(key)}" ${selectedSet.has(key)?'checked':''}><span style="color:${safeColor(m.color)}">${escapeHTML(m.name)}</span></label>`;
+  }).join('');
+  const count=$('#nameMaskExceptionCount');if(count)count.textContent=String(selected.length);
+  box.querySelectorAll('input').forEach(input=>input.onchange=()=>{
+    const keys=new Set(state.settings.maskExemptSpeakerKeys);
+    input.checked?keys.add(input.value):keys.delete(input.value);
+    state.settings.maskExemptSpeakerKeys=[...keys];
+    const c=$('#nameMaskExceptionCount');if(c)c.textContent=String(state.settings.maskExemptSpeakerKeys.length);
+    renderMessages(false);scheduleSave();
+  });
+}
+const v24ApplySettings=applySettings;
+applySettings=function(){
+  v24ApplySettings();
+  document.documentElement.dataset.maskSpeakerNames=state.settings.maskSpeakerNames?'true':'false';
+  syncNameMaskControls();
+};
+const v24RenderAll=renderAll;
+renderAll=function(reset=true){v24RenderAll(reset);syncNameMaskControls()};
+
+function renderMessages(resetLimit=false){
+  if(resetLimit)visibleLimit=320;
+  const list=$('#chatList'), filtered=filteredMessages(), shown=filtered.slice(0,visibleLimit);
+  $('#messageCount').textContent=state.messages.length.toLocaleString('ko-KR');
+  updateFilterCounts();
+  list.textContent='';
+  if(!shown.length){
+    const canAdd=!$('#messageSearch').value.trim()&&!Object.keys(typeCountsFromMessages()).length;
+    list.innerHTML=`<div class="empty-state"><div><div class="empty-icon">💬</div><b>${state.messages.length?'조건에 맞는 항목이 없습니다':'아직 항목이 없어요'}</b><span>${state.messages.length?'검색어 또는 필터를 바꿔 보세요':'로그를 불러오거나 항목을 추가해 보세요'}</span>${canAdd?'<button class="soft-btn" id="emptyAddBtn" type="button">첫 항목 추가</button>':''}</div></div>`;
+    if(canAdd)$('#emptyAddBtn').onclick=()=>openInlineEditor('add','','say');
+    return;
+  }
+  const frag=document.createDocumentFragment();
+  for(const msg of shown){
+    const row=document.createElement('div');row.className='chat-row type-'+msg.type;row.dataset.messageId=msg.id;
+    if(isNonSpeakerType(msg.type)){
+      row.classList.add('special-row');row.innerHTML=renderSpecialRow(msg);
+    }else{
+      const mem=resolveMember(msg),shownName=displaySpeakerName(mem.name);
+      if(isActionType(msg.type)){
+        row.innerHTML=`<div class="action-row"><b style="color:${safeColor(mem.color)}">${escapeHTML(shownName)}</b>${actionGap(msg.actionText||stripHTML(msg.html))}${msg.actionText?escapeHTML(msg.actionText):msg.html}</div>${rowTools(msg.id)}`;
+      }else{
+        row.innerHTML=`${avatarHTML(mem)}<div class="chat-main"><div class="chat-name" style="color:${safeColor(mem.color)}">${escapeHTML(shownName)}</div><div class="bubble">${msg.html}${msg.image?`<img class="attachment" alt="첨부 이미지" src="${escapeHTML(msg.image)}">`:''}</div>${rowTools(msg.id)}</div>`;
+      }
+    }
+    frag.append(row);
+    if(inlineEditor.mode&&inlineEditor.anchorId===msg.id){const wrap=document.createElement('div');wrap.innerHTML=renderInlineEditor();frag.append(...wrap.childNodes)}
+  }
+  list.append(frag);
+  if(!inlineEditor.anchorId&&inlineEditor.mode==='add'){const wrap=document.createElement('div');wrap.innerHTML=renderInlineEditor();list.append(...wrap.childNodes)}
+  if(filtered.length>shown.length){const btn=document.createElement('button');btn.className='soft-btn load-more';btn.textContent=`더 불러오기 (${(filtered.length-shown.length).toLocaleString('ko-KR')}개 남음)`;btn.onclick=()=>{visibleLimit+=500;renderMessages(false)};list.append(btn)}
+  if(filtered.length!==state.messages.length){const note=document.createElement('div');note.className='filtered-note';note.textContent=`전체 ${state.messages.length.toLocaleString('ko-KR')}개 중 ${filtered.length.toLocaleString('ko-KR')}개 표시`;list.append(note)}
+}
+
+makeCompactExportData=function(messages){
+  ensureCompactState();
+  const hideAvatars=Boolean(state.settings.hideAvatars),assets=[],assetIndex=new Map(),texts=[],textIndex=new Map(),profiles=[],profileIndex=new Map();
+  const asset=src=>{if(!src)return-1;if(assetIndex.has(src))return assetIndex.get(src);const i=assets.length;assets.push(src);assetIndex.set(src,i);return i};
+  const textFor=html=>{const key=String(html||'');if(textIndex.has(key))return textIndex.get(key);const i=texts.length;texts.push(key);textIndex.set(key,i);return i};
+  const profileFor=msg=>{
+    const m=resolveMember(msg),av=hideAvatars?-1:asset(m.avatar||''),name=escapeHTML(displaySpeakerName(m.name||'알 수 없음')),color=safeColor(m.color,'#777777'),key=name+'\u0000'+color+'\u0000'+av;
+    if(profileIndex.has(key))return profileIndex.get(key);
+    const i=profiles.length;profiles.push([name,color,av]);profileIndex.set(key,i);return i;
+  };
+  const rows=messages.map(msg=>{
+    if(msg.type==='divider')return ['divider'];
+    if(isNonSpeakerType(msg.type))return [msg.type,textFor(msg.html||'')];
+    const p=profileFor(msg);
+    if(isActionType(msg.type))return ['action',p,textFor(msg.actionText?escapeHTML(msg.actionText):msg.html||'')];
+    const row=['message',p,textFor(msg.html||'')];if(msg.image)row.push(asset(msg.image));return row;
+  });
+  return [profiles,rows,assets,texts];
+};
+
+const v24MeasurePngItem=measurePngItem;
+measurePngItem=function(ctx,message,member,imageMap,layout){return v24MeasurePngItem(ctx,message,displaySpeakerMember(member),imageMap,layout)};
+
+function injectV25Styles(){
+  if(document.getElementById('v25-style'))return;
+  const style=document.createElement('style');style.id='v25-style';style.textContent=`
+.name-mask-exceptions{margin-top:9px;border:1px solid var(--line);border-radius:12px;background:var(--panel-2);overflow:hidden}
+.name-mask-exceptions.hidden{display:none!important}
+.name-mask-exceptions summary{cursor:pointer;list-style:none;padding:9px 11px;font-size:12px;font-weight:750;color:var(--muted);user-select:none}
+.name-mask-exceptions summary::-webkit-details-marker{display:none}
+.name-mask-exceptions summary:after{content:'⌄';float:right;font-size:13px;transition:transform .15s ease}
+.name-mask-exceptions[open] summary:after{transform:rotate(180deg)}
+.name-mask-speaker-checks{display:flex;gap:6px;flex-wrap:wrap;max-height:150px;overflow:auto;padding:0 10px 10px}
+.name-mask-chip{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:4px 9px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:12px;font-weight:700;cursor:pointer}
+.name-mask-chip input{margin:0;accent-color:var(--accent)}
+.name-mask-empty{padding:4px 2px 2px;color:var(--muted);font-size:12px}
+`;
+  document.head.append(style);
+}
+function setupV25Controls(){
+  injectV25Styles();ensureSettings();
+  $$('#nameMaskMode [data-name-mask]').forEach(button=>button.onclick=()=>{
+    state.settings.maskSpeakerNames=button.dataset.nameMask==='mask';
+    applySettings();renderMessages(false);scheduleSave();
+  });
+  syncNameMaskControls();
+}
 async function init(){
   bindEvents();setupV5Controls();setupV8ImageHandling();setupOutgoingTellSetting();
   const saved=await dbGet();let oldVersion=0;
   if(saved&&saved.settings&&Array.isArray(saved.members)&&Array.isArray(saved.messages)){oldVersion=Number(saved.version||0);state={...structuredClone(DEFAULT_STATE),...saved,settings:{...DEFAULT_STATE.settings,...saved.settings},speakerProfiles:{...(saved.speakerProfiles||{})},archivedMembers:{...(saved.archivedMembers||{})}};if(oldVersion<5&&state.settings.fontPreset==='system')state.settings.fontPreset='pretendard'}
-  ensureSettings();ensureCompactState();state.version=24;cleanStoredEmotes();seedSpeakerProfiles();
+  ensureSettings();ensureCompactState();state.version=25;cleanStoredEmotes();seedSpeakerProfiles();
   if(oldVersion&&oldVersion<8){const count=await optimizeStoredImages();if(count)toast(`기존 이미지 ${count.toLocaleString('ko-KR')}개를 128px 기준으로 최적화했습니다.`)}
   viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));renderAll(true);syncMobileTabs();updateAvatarPreview();
 }
 
-init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();updateMinimalCopy();});
+init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();updateMinimalCopy();});
 })();
 </script>
 </body>
