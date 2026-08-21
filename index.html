@@ -3234,7 +3234,7 @@ function applyRememberedSpeakerToNewMember(){
 }
 
 /* ==== v34 muted parenthetical text ==== */
-DEFAULT_STATE.version=34;
+DEFAULT_STATE.version=35;
 
 function parentheticalHtmlRanges(html=''){
   const source=String(html||''),stack=[],ranges=[];
@@ -3325,6 +3325,27 @@ renderPngPage=async function(page,pageIndex,pageCount,layout,palette){
 };
 function setupV34Controls(){injectV34Styles();renderMessages(false)}
 
+
+/* ==== v35 grouped spacing: equalize first-to-continuation gap ==== */
+function markGroupedStartsV35(){
+  const list=$('#chatList');if(!list)return;
+  list.querySelectorAll('.chat-row.grouped-start').forEach(row=>row.classList.remove('grouped-start'));
+  list.querySelectorAll('.chat-row.grouped-continuation').forEach(row=>{
+    let prev=row.previousElementSibling;
+    while(prev&&!prev.classList.contains('chat-row'))prev=prev.previousElementSibling;
+    if(prev&&!prev.classList.contains('grouped-continuation'))prev.classList.add('grouped-start');
+  });
+}
+const v34RenderMessagesV35=renderMessages;
+renderMessages=function(resetLimit=false){v34RenderMessagesV35(resetLimit);markGroupedStartsV35()};
+function injectV35Styles(){
+  if(document.getElementById('v35-style'))return;
+  const style=document.createElement('style');style.id='v35-style';
+  style.textContent=`.chat-row.grouped-start{padding-bottom:0!important}`;
+  document.head.append(style);
+}
+function setupV35Controls(){injectV35Styles();renderMessages(false)}
+
 function setupV33Controls(){
   // No extra panel: sourceName is an internal stable key. Keep the editor visually unchanged.
 }
@@ -3333,12 +3354,12 @@ async function init(){
   bindEvents();setupV5Controls();setupV8ImageHandling();setupOutgoingTellSetting();
   const saved=await dbGet();let oldVersion=0;
   if(saved&&saved.settings&&Array.isArray(saved.members)&&Array.isArray(saved.messages)){oldVersion=Number(saved.version||0);state={...structuredClone(DEFAULT_STATE),...saved,settings:{...DEFAULT_STATE.settings,...saved.settings},speakerProfiles:{...(saved.speakerProfiles||{})},archivedMembers:{...(saved.archivedMembers||{})}};if(oldVersion<5&&state.settings.fontPreset==='system')state.settings.fontPreset='pretendard'}
-  ensureSettings();ensureCompactState();if(oldVersion<33)migrateWorldSpeakerIdentities();cleanupSpeakerMemoryArtifacts();migrateStableSpeakerIdentities();state.version=34;cleanStoredEmotes();seedSpeakerProfiles();
+  ensureSettings();ensureCompactState();if(oldVersion<33)migrateWorldSpeakerIdentities();cleanupSpeakerMemoryArtifacts();migrateStableSpeakerIdentities();state.version=35;cleanStoredEmotes();seedSpeakerProfiles();
   if(oldVersion&&oldVersion<8){const count=await optimizeStoredImages();if(count)toast(`기존 이미지 ${count.toLocaleString('ko-KR')}개를 128px 기준으로 최적화했습니다.`)}
   viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));renderAll(true);syncMobileTabs();updateAvatarPreview();
 }
 
-init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();setupV27Controls();setupV30Controls();setupV31Controls();setupV33Controls();setupV34Controls();updateMinimalCopy();});
+init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();setupV27Controls();setupV30Controls();setupV31Controls();setupV33Controls();setupV34Controls();setupV35Controls();updateMinimalCopy();});
 })();
 </script>
 </body>
