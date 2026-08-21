@@ -597,7 +597,7 @@ function openNewMemberPanel(){editingMemberId=null;pendingAvatar='';$('#memberNa
 function saveMember(){const name=$('#memberName').value.trim();if(!name){toast('화자 이름을 입력해 주세요.','warn');return}const duplicate=state.members.find(m=>m.name===name);if(duplicate){toast('같은 이름의 화자가 이미 있습니다.','warn');return}const member={id:uid(),name,color:safeColor($('#memberColorText').value,$('#memberColor').value),avatar:pendingAvatar||''};state.members.push(member);rememberSpeaker(member);viewMembers.add(member.id);resetMemberForm();renderAll(false);toast('화자를 추가했습니다.');}
 function openMemberEdit(id){editingMemberId=editingMemberId===id?null:id;memberEditLinkOpen=false;const m=state.members.find(x=>x.id===editingMemberId);memberEditAvatar=m?.avatar||'';renderMembers();if(m)setTimeout(()=>$('#inlineMemberName')?.focus(),0);}
 function saveInlineMember(){const m=state.members.find(x=>x.id===editingMemberId);if(!m)return;const name=$('#inlineMemberName').value.trim();if(!name){toast('화자 이름을 입력해 주세요.','warn');return}if(state.members.some(x=>x.id!==m.id&&x.name===name)){toast('같은 이름의 화자가 이미 있습니다.','warn');return}m.name=name;m.color=safeColor($('#inlineMemberColorText').value,$('#inlineMemberColor').value);m.avatar=memberEditAvatar||'';for(const msg of state.messages.filter(x=>x.memberId===m.id))msg.senderSnapshot={name:m.name,color:m.color,avatar:m.avatar};rememberSpeaker(m);editingMemberId=null;memberEditAvatar='';renderAll(false);toast('화자 정보를 수정했습니다.');}
-function memberEditForm(m){return `<div class="member-item-edit"><div class="member-form-grid"><div class="avatar-preview">${memberEditAvatar?`<img alt="" src="${escapeHTML(memberEditAvatar)}">`:avatarPlaceholderHTML()}</div><div><div class="field"><span class="label">이름</span><input class="input" id="inlineMemberName" value="${escapeHTML(m.name)}" maxlength="60"></div><div class="member-inline-actions"><button class="tiny-btn" data-inline-avatar-file="1" type="button">이미지 업로드</button><button class="tiny-btn" data-inline-avatar-link-toggle="1" type="button">이미지 링크</button><button class="tiny-btn ${memberEditAvatar?'':'hidden'}" data-inline-avatar-remove="1" type="button">이미지 삭제</button></div></div></div><div class="inline-avatar-link ${memberEditLinkOpen?'open':''}"><input class="input" id="inlineMemberAvatarLink" placeholder="https://..."><button class="soft-btn" data-inline-avatar-link-apply="1" type="button">적용</button></div><div class="field"><span class="label">이름 색상</span><div class="color-row"><input class="color-input" id="inlineMemberColor" type="color" value="${safeColor(m.color)}"><input class="input" id="inlineMemberColorText" value="${safeColor(m.color)}" maxlength="7"></div></div><div class="member-memory-note">저장하면 다음 로그에서도 같은 이름의 화자에게 자동 적용됩니다.</div><div class="form-actions"><button class="primary-btn" data-inline-member-save="1" type="button">수정 저장</button><button class="soft-btn" data-inline-member-cancel="1" type="button">취소</button></div></div>`;}
+function memberEditForm(m){return `<div class="member-item-edit"><div class="member-form-grid"><div class="avatar-preview">${memberEditAvatar?`<img alt="" src="${escapeHTML(memberEditAvatar)}">`:avatarPlaceholderHTML()}</div><div><div class="field"><span class="label">이름</span><input class="input" id="inlineMemberName" value="${escapeHTML(m.name)}" maxlength="60"></div><div class="member-inline-actions"><button class="tiny-btn" data-inline-avatar-file="1" type="button">이미지 업로드</button><button class="tiny-btn" data-inline-avatar-link-toggle="1" type="button">이미지 링크</button><button class="tiny-btn ${memberEditAvatar?'':'hidden'}" data-inline-avatar-remove="1" type="button">이미지 삭제</button></div></div></div><div class="inline-avatar-link ${memberEditLinkOpen?'open':''}"><input class="input" id="inlineMemberAvatarLink" placeholder="https://..."><button class="soft-btn" data-inline-avatar-link-apply="1" type="button">적용</button></div><div class="field"><span class="label">이름 색상</span><div class="color-row"><input class="color-input" id="inlineMemberColor" type="color" value="${safeColor(m.color)}"><input class="input" id="inlineMemberColorText" value="${safeColor(m.color)}" maxlength="7"></div></div><div class="member-memory-note">저장하면 다음 로그에서도 같은 원본 화자에게 자동 적용됩니다.</div><div class="form-actions"><button class="primary-btn" data-inline-member-save="1" type="button">수정 저장</button><button class="soft-btn" data-inline-member-cancel="1" type="button">취소</button></div></div>`;}
 function renderMembers(){const counts=messageCounts();$('#memberBadge').textContent=state.members.length+'명';const list=$('#memberList');list.textContent='';if(!state.members.length){list.innerHTML='<div class="card-desc">아직 화자가 없습니다.</div>';return}const frag=document.createDocumentFragment();for(const m of state.members){const row=document.createElement('div');row.className='member-item'+(editingMemberId===m.id?' is-editing':'');row.innerHTML=`${avatarHTML(m,'member-avatar')}<div><div class="member-name" style="color:${safeColor(m.color)}">${escapeHTML(m.name)}</div><div class="member-count">${(counts.get(m.id)||0).toLocaleString('ko-KR')}개 메시지</div></div><div class="member-actions"><button class="soft-btn" data-member-edit="${m.id}" title="수정">수정</button><button class="tiny-btn" data-member-delete="${m.id}" title="삭제">×</button></div>${editingMemberId===m.id?memberEditForm(m):''}`;frag.append(row)}list.append(frag);}
 
 function speakerCounts(){const counts=new Map();for(const msg of state.messages)counts.set(msg.memberId,(counts.get(msg.memberId)||0)+1);return counts;}
@@ -655,9 +655,12 @@ const THEME_STYLE_PRESETS={
   dark:{theme:'dark',bgColor:'#17191f',paperColor:'#20232b',textColor:'#eef1f7'}
 };
 const WORLD_NAME_SUFFIXES=['모그리','톤베리','초코보','카벙클','펜리르'];
-const WORLD_NAME_SUFFIX_RE=new RegExp("([가-힣A-Za-z0-9'’._-]+?)("+WORLD_NAME_SUFFIXES.join('|')+")(?=(?:에게서|한테서|에게|한테|께|을|를|이|가|은|는|와|과|의|도|만|으로|로|에서|부터|까지|처럼|보다|하고|랑|이랑|,|\\.|!|\\?|…|\\s|$))","g");
+// FFXIV cross-world names can appear as `이름서버`, `이름'서버`, `이름-서버` etc.
+// Treat the punctuation immediately before the known world name as part of the world marker,
+// while preserving apostrophes/hyphens that occur inside the actual character name.
+const WORLD_NAME_SUFFIX_RE=new RegExp("([가-힣A-Za-z0-9'’._-]+?)(?:['’._-]?)("+WORLD_NAME_SUFFIXES.join('|')+")(?=(?:에게서|한테서|에게|한테|께|을|를|이|가|은|는|와|과|의|도|만|으로|로|에서|부터|까지|처럼|보다|하고|랑|이랑|,|\\.|!|\\?|…|\\s|$))","g");
 function cleanWorldNameSuffixes(text=''){return String(text||'').replace(WORLD_NAME_SUFFIX_RE,'$1');}
-function normalizeRegularName(raw){return cleanWorldNameSuffixes(String(raw||'').replace(/^\s*(?:to|from)\s+/i,'').replace(/^\s*(?:귓속말\s*[:：-]?\s*)/i,'').replace(/\s*[:：]\s*$/,'').trim());}
+function normalizeRegularName(raw){return cleanWorldNameSuffixes(String(raw||'').replace(/^\s*(?:to|from)\s+/i,'').replace(/^\s*(?:귓속말\s*[:：-]?\s*)/i,'').replace(/\s*[:：]\s*$/,'').trim()).replace(/['’]$/,'').trim();}
 function buildActionText(rawSender,name,message){const sender=cleanWorldNameSuffixes(String(rawSender||'').trim()),body=cleanWorldNameSuffixes(String(message||'').trim()),cleanName=cleanWorldNameSuffixes(name);if(sender===cleanName)return body;const suffix=sender.startsWith(cleanName)?sender.slice(cleanName.length).trim():sender;return (suffix+(suffix&&body?' ':'')+body).trim();}
 function cleanStoredEmotes(){for(const msg of state.messages){if(msg.type!=='emote'&&msg.type!=='emote-custom')continue;const source=msg.actionText||stripHTML(msg.html||'');const cleaned=cleanWorldNameSuffixes(source);if(cleaned!==source)msg.actionText=cleaned;}}
 function defaultStyleSettings(){return {theme:'light',avatarShape:'circle',chatTitle:'채팅 백업',fontSize:16,fontPreset:'pretendard',avatarSize:42,lineHeight:1.65,textColor:'#222832',bgColor:'#f5f6f8',paperColor:'#ffffff',bubbleWidth:76};}
@@ -2906,7 +2909,7 @@ function setupV27Controls(){
 
 
 /* ==== v31 speaker library: remember profiles without creating absent speakers ==== */
-DEFAULT_STATE.version=31;
+DEFAULT_STATE.version=32;
 let newMemberMemoryKey='';
 function applyRememberedSpeakerToNewMember(){
   const input=$('#memberName');if(!input||editingMemberId)return;
@@ -2958,16 +2961,292 @@ html[data-hide-avatars="true"] .grouped-continuation{display:block!important}
 }
 function setupV30Controls(){injectV30Styles()}
 
+
+/* ==== v32 FFXIV world-name normalization + profile migration ==== */
+function speakerProfileRichness(profile){
+  if(!profile)return 0;
+  const name=normalizeRegularName(profile.name||'');
+  let score=0;
+  if(profile.avatar)score+=4;
+  const color=safeColor(profile.color,hashColor(name||'speaker'));
+  if(name&&color.toLowerCase()!==hashColor(name).toLowerCase())score+=2;
+  return score;
+}
+function mergeSpeakerProfileData(base,extra,name){
+  const a=base||{},b=extra||{};
+  const richer=speakerProfileRichness(b)>speakerProfileRichness(a)?b:a;
+  const other=richer===a?b:a;
+  return {
+    name,
+    color:safeColor(richer.color||other.color,hashColor(name)),
+    avatar:String(richer.avatar||other.avatar||'')
+  };
+}
+function migrateWorldSpeakerIdentities(){
+  ensureSettings();ensureCompactState();
+  let changed=0;
+  // Re-key remembered profiles first so an old `이름'` profile is found before seedSpeakerProfiles runs.
+  const migratedProfiles={};
+  for(const profile of Object.values(state.speakerProfiles||{})){
+    const name=normalizeRegularName(profile?.name||'');
+    if(!name||!isSpeakerMemoryNameSafe(name))continue;
+    const key=profileKey(name);
+    migratedProfiles[key]=mergeSpeakerProfileData(migratedProfiles[key],profile,name);
+    if(profile?.name!==name)changed++;
+  }
+  state.speakerProfiles=migratedProfiles;
+
+  const msgCounts=new Map();
+  for(const msg of state.messages||[])msgCounts.set(msg.memberId,(msgCounts.get(msg.memberId)||0)+1);
+  const byKey=new Map(),kept=[];
+  for(const member of state.members||[]){
+    const oldName=String(member?.name||''),name=normalizeRegularName(oldName);
+    if(name&&oldName!==name){member.name=name;changed++}
+    const key=profileKey(member.name||'');
+    if(!key){kept.push(member);continue}
+    const existing=byKey.get(key);
+    if(!existing){byKey.set(key,member);kept.push(member);continue}
+    // Only duplicates created by normalization reach here. Keep the more useful profile/member.
+    const currentScore=(msgCounts.get(existing.id)||0)*10+speakerProfileRichness(existing);
+    const incomingScore=(msgCounts.get(member.id)||0)*10+speakerProfileRichness(member);
+    let primary=existing,secondary=member;
+    if(incomingScore>currentScore){primary=member;secondary=existing;byKey.set(key,primary);const idx=kept.indexOf(existing);if(idx>=0)kept[idx]=primary}
+    const merged=mergeSpeakerProfileData(primary,secondary,normalizeRegularName(primary.name));
+    primary.name=merged.name;primary.color=merged.color;primary.avatar=merged.avatar;
+    for(const msg of state.messages||[])if(msg.memberId===secondary.id){msg.memberId=primary.id;changed++}
+    if(state.archivedMembers?.[secondary.id])delete state.archivedMembers[secondary.id];
+    changed++;
+  }
+  state.members=kept;
+
+  // Normalize archived names and message snapshots as well.
+  for(const archived of Object.values(state.archivedMembers||{})){
+    const name=normalizeRegularName(archived?.name||'');
+    if(name&&archived.name!==name){archived.name=name;changed++}
+  }
+  const memberById=new Map((state.members||[]).map(m=>[m.id,m]));
+  for(const msg of state.messages||[]){
+    const member=memberById.get(msg.memberId)||state.archivedMembers?.[msg.memberId];
+    if(member&&msg.senderSnapshot){
+      msg.senderSnapshot={name:member.name,color:member.color,avatar:member.avatar||''};
+    }
+  }
+  return changed;
+}
+
+
+/* ==== v33 stable speaker identity: source name + display name ==== */
+DEFAULT_STATE.version=33;
+
+function speakerSourceName(member){
+  return normalizeRegularName(member?.sourceName||member?.originalName||member?.name||'');
+}
+function normalizeSpeakerDisplayName(raw=''){return String(raw||'').trim();}
+function speakerDisplayName(member){
+  return normalizeSpeakerDisplayName(member?.name||member?.displayName||speakerSourceName(member)||'');
+}
+function sourceProfileKey(name){
+  return profileKey(normalizeRegularName(name||''));
+}
+function normalizeSpeakerIdentityRecord(member){
+  if(!member||typeof member!=='object')return member;
+  const source=speakerSourceName(member),display=speakerDisplayName(member)||source;
+  if(source)member.sourceName=source;
+  if(display)member.name=display;
+  if('originalName' in member)delete member.originalName;
+  if('displayName' in member)delete member.displayName;
+  return member;
+}
+function rememberSpeaker(member){
+  if(!member)return;
+  ensureSettings();normalizeSpeakerIdentityRecord(member);
+  const source=speakerSourceName(member),display=speakerDisplayName(member);
+  if(!source||!isSpeakerMemoryNameSafe(source)||!isSpeakerMemoryNameSafe(display))return;
+  state.speakerProfiles[sourceProfileKey(source)]={
+    sourceName:source,
+    name:display,
+    color:safeColor(member.color,hashColor(source)),
+    avatar:String(member.avatar||'')
+  };
+}
+function rememberedSpeaker(sourceName){
+  ensureSettings();
+  const source=normalizeRegularName(sourceName||'');if(!source)return null;
+  const direct=state.speakerProfiles[sourceProfileKey(source)];
+  if(direct)return direct;
+  // Compatibility fallback for old libraries keyed by display name.
+  return Object.values(state.speakerProfiles||{}).find(p=>sourceProfileKey(p?.sourceName||p?.name||'')===sourceProfileKey(source))||null;
+}
+function seedSpeakerProfiles(){
+  ensureSettings();for(const member of state.members||[])rememberSpeaker(member);
+}
+function migrateStableSpeakerIdentities(){
+  ensureSettings();ensureCompactState();let changed=0;
+  for(const member of state.members||[]){
+    const before=JSON.stringify([member.sourceName,member.name]);normalizeSpeakerIdentityRecord(member);
+    if(before!==JSON.stringify([member.sourceName,member.name]))changed++;
+  }
+  for(const archived of Object.values(state.archivedMembers||{})){
+    const before=JSON.stringify([archived.sourceName,archived.name]);normalizeSpeakerIdentityRecord(archived);
+    if(before!==JSON.stringify([archived.sourceName,archived.name]))changed++;
+  }
+  const migrated={};
+  for(const raw of Object.values(state.speakerProfiles||{})){
+    if(!raw||typeof raw!=='object')continue;
+    const source=normalizeRegularName(raw.sourceName||raw.originalName||raw.name||'');
+    const display=normalizeSpeakerDisplayName(raw.displayName||raw.name||source);
+    if(!source||!display||!isSpeakerMemoryNameSafe(source)||!isSpeakerMemoryNameSafe(display))continue;
+    const key=sourceProfileKey(source),candidate={sourceName:source,name:display,color:safeColor(raw.color,hashColor(source)),avatar:String(raw.avatar||'')};
+    const prev=migrated[key];
+    if(!prev)migrated[key]=candidate;
+    else{
+      const richer=speakerProfileRichness(candidate)>speakerProfileRichness(prev)?candidate:prev;
+      migrated[key]={sourceName:source,name:richer.name||display,color:richer.color,avatar:richer.avatar||''};
+    }
+  }
+  state.speakerProfiles=migrated;
+  // Current members are authoritative for their source→display relationship.
+  for(const member of state.members||[])rememberSpeaker(member);
+  for(const msg of state.messages||[]){
+    const member=(state.members||[]).find(m=>m.id===msg.memberId)||state.archivedMembers?.[msg.memberId];
+    if(member&&msg.senderSnapshot)msg.senderSnapshot={name:member.name,color:member.color,avatar:member.avatar||''};
+  }
+  return changed;
+}
+
+function findMemberBySourceName(name=''){
+  const key=sourceProfileKey(name);if(!key)return null;
+  return (state.members||[]).find(member=>sourceProfileKey(speakerSourceName(member))===key)||null;
+}
+function findMemberByName(name=''){
+  const key=profileKey(name);if(!key)return null;
+  return (state.members||[]).find(member=>sourceProfileKey(speakerSourceName(member))===key||profileKey(member.name)===key)||null;
+}
+function ensureManualSpeaker(name=''){
+  const clean=normalizeRegularName(String(name||'')).trim();if(!clean)return null;
+  const existing=findMemberByName(clean);if(existing)return existing;
+  const remembered=rememberedSpeaker(clean);
+  const member={id:uid(),sourceName:clean,name:remembered?.name||clean,color:remembered?.color||hashColor(clean),avatar:remembered?.avatar||''};
+  state.members.push(member);rememberSpeaker(member);return member;
+}
+function createOrFindMemberByName(name){
+  const clean=normalizeRegularName(name);if(!clean)return null;
+  let member=findMemberByName(clean);if(member)return member;
+  const remembered=rememberedSpeaker(clean);
+  member={id:uid(),sourceName:clean,name:remembered?.name||clean,color:remembered?.color||hashColor(clean),avatar:remembered?.avatar||''};
+  state.members.push(member);rememberSpeaker(member);return member;
+}
+function saveMember(){
+  const name=$('#memberName').value.trim();if(!name){toast('화자 이름을 입력해 주세요.','warn');return}
+  const duplicate=state.members.find(m=>m.name===name);if(duplicate){toast('같은 이름의 화자가 이미 있습니다.','warn');return}
+  const remembered=rememberedSpeaker(name),display=remembered?.name||name;
+  if(state.members.some(m=>m.name===display)){toast('같은 이름의 화자가 이미 있습니다.','warn');return}
+  const member={id:uid(),sourceName:name,name:display,color:safeColor($('#memberColorText').value,remembered?.color||$('#memberColor').value),avatar:pendingAvatar||remembered?.avatar||''};
+  state.members.push(member);rememberSpeaker(member);viewMembers.add(member.id);resetMemberForm();renderAll(false);toast('화자를 추가했습니다.');
+}
+function saveInlineMember(){
+  const m=state.members.find(x=>x.id===editingMemberId);if(!m)return;
+  normalizeSpeakerIdentityRecord(m);
+  const name=$('#inlineMemberName').value.trim();if(!name){toast('화자 이름을 입력해 주세요.','warn');return}
+  if(state.members.some(x=>x.id!==m.id&&x.name===name)){toast('같은 이름의 화자가 이미 있습니다.','warn');return}
+  // sourceName is intentionally NOT changed here. The edited value is display-only.
+  m.name=name;m.color=safeColor($('#inlineMemberColorText').value,$('#inlineMemberColor').value);m.avatar=memberEditAvatar||'';
+  for(const msg of state.messages.filter(x=>x.memberId===m.id))if(msg.senderSnapshot)msg.senderSnapshot={name:m.name,color:m.color,avatar:m.avatar};
+  rememberSpeaker(m);editingMemberId=null;memberEditAvatar='';ensureCompactState();renderAll(false);toast('화자 정보를 수정했습니다.');
+}
+async function deleteMember(id){
+  const m=state.members.find(x=>x.id===id);if(!m)return;
+  if(!await confirmBox('화자를 삭제할까요?',`${m.name}의 기존 메시지는 이름과 프로필을 유지한 채 남아 있습니다.`))return;
+  ensureCompactState();normalizeSpeakerIdentityRecord(m);
+  state.archivedMembers[id]={sourceName:speakerSourceName(m),name:m.name,color:m.color,avatar:m.avatar||''};
+  state.members=state.members.filter(x=>x.id!==id);rememberSpeaker(m);
+  if(editingMemberId===id){editingMemberId=null;memberEditAvatar=''}
+  renderAll(false);toast('화자를 삭제했습니다.','warn');
+}
+
+async function commitImport(){
+  const types=selectedImportTypes(),rawSource=pendingImport.messages.filter(m=>types.has(m.type));if(!rawSource.length)return;
+  const sender=outgoingTellSenderName();
+  if(rawSource.some(m=>m.type==='tell-to')&&!sender){toast('보내는 귓속말 화자를 먼저 지정해 주세요.','warn');$('#outgoingTellSender')?.focus();return}
+  const source=rawSource.map(m=>m.type==='tell-to'?{...m,tellPeer:m.memberName,memberName:sender}:m);
+  lastImportBackup=structuredClone(state);ensureSettings();ensureCompactState();migrateStableSpeakerIdentities();
+  const existingBySource=new Map((state.members||[]).map(m=>[sourceProfileKey(speakerSourceName(m)),m]));
+  if(importMode==='replace'){state.members=[];state.messages=[];state.archivedMembers={};existingBySource.clear()}
+  const names=[...new Set(source.map(m=>normalizeRegularName(m.memberName)).filter(Boolean))];
+  for(const sourceName of names){
+    const key=sourceProfileKey(sourceName);if(existingBySource.has(key))continue;
+    const remembered=rememberedSpeaker(sourceName);
+    const sourceM=pendingImport.members.find(m=>sourceProfileKey(m.name)===key)||{name:sourceName,color:hashColor(sourceName),avatar:''};
+    const member={id:uid(),sourceName,name:remembered?.name||sourceName,color:remembered?.color||sourceM.color||hashColor(sourceName),avatar:remembered?.avatar||sourceM.avatar||''};
+    state.members.push(member);existingBySource.set(key,member);rememberSpeaker(member);
+  }
+  setProgress(0,'로그 등록 중',`${source.length.toLocaleString('ko-KR')}개 메시지를 정리하고 있습니다.`);const chunk=500;
+  for(let i=0;i<source.length;i+=chunk){
+    for(const raw of source.slice(i,i+chunk)){
+      const sourceName=normalizeRegularName(raw.memberName),member=existingBySource.get(sourceProfileKey(sourceName));if(!member)continue;
+      state.messages.push({id:uid(),memberId:member.id,type:raw.type,html:raw.html,actionText:raw.actionText||'',image:'',sourceId:raw.sourceId||'',tellPeer:raw.tellPeer||''});
+    }
+    setProgress(((i+chunk)/source.length)*100,'로그 등록 중',`${Math.min(i+chunk,source.length).toLocaleString('ko-KR')} / ${source.length.toLocaleString('ko-KR')}`);await new Promise(r=>setTimeout(r,0));
+  }
+  endProgress();viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));$('#viewTypeChecks').dataset.initialized='';$('#viewSpeakerChecks').dataset.initialized='';$('#undoImport').classList.remove('hidden');pendingImport=null;renderImportTypeChecks();$('#parseResult').classList.add('hidden');$('#logFile').value='';renderAll(true);toast('로그 일괄 등록을 완료했습니다.');
+}
+
+function collectSpeakerLibrary(){
+  ensureSettings();ensureCompactState();migrateStableSpeakerIdentities();const map=new Map();
+  const add=p=>{
+    if(!p)return;const source=normalizeRegularName(p.sourceName||p.originalName||p.name||''),display=normalizeSpeakerDisplayName(p.displayName||p.name||source);
+    if(!isSpeakerMemoryNameSafe(source)||!isSpeakerMemoryNameSafe(display))return;
+    map.set(sourceProfileKey(source),{sourceName:source,name:display,color:safeColor(p.color,hashColor(source)),avatar:String(p.avatar||'')});
+  };
+  Object.values(state.speakerProfiles||{}).forEach(add);Object.values(state.archivedMembers||{}).forEach(add);state.members.forEach(add);
+  return [...map.values()].sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+}
+function exportSpeakerLibrary(){
+  cleanupSpeakerMemoryArtifacts();const speakers=collectSpeakerLibrary();if(!speakers.length){toast('저장할 화자 설정이 없습니다.','warn');return}
+  const payload={kind:'chat-speaker-library',version:3,exportedAt:new Date().toISOString(),speakers};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'}),stamp=new Date().toISOString().slice(0,10).replaceAll('-','');downloadBlob(blob,`chat-speakers-${stamp}.json`);toast(`화자 설정 ${speakers.length.toLocaleString('ko-KR')}개를 저장했습니다.`);
+}
+async function importSpeakerLibrary(file){
+  if(!file)return;
+  try{
+    const parsed=JSON.parse(await file.text()),items=Array.isArray(parsed)?parsed:Array.isArray(parsed?.speakers)?parsed.speakers:null;if(!items)throw new Error('화자 백업 파일 형식이 아닙니다.');
+    let remembered=0,applied=0,skipped=0;ensureSettings();ensureCompactState();migrateStableSpeakerIdentities();cleanupSpeakerMemoryArtifacts();
+    for(const raw of items){
+      const source=normalizeRegularName(raw?.sourceName||raw?.originalName||raw?.name||''),display=normalizeSpeakerDisplayName(raw?.displayName||raw?.name||source);
+      if(!isSpeakerMemoryNameSafe(source)||!isSpeakerMemoryNameSafe(display)){skipped++;continue}
+      const key=sourceProfileKey(source),color=safeColor(raw?.color,hashColor(source)),avatar=typeof raw?.avatar==='string'?raw.avatar:'';
+      state.speakerProfiles[key]={sourceName:source,name:display,color,avatar};remembered++;
+      const current=findMemberBySourceName(source);
+      if(current){current.name=display;current.color=color;current.avatar=avatar;applied++;for(const msg of state.messages.filter(x=>x.memberId===current.id))if(msg.senderSnapshot)msg.senderSnapshot={name:display,color,avatar}}
+      for(const archived of Object.values(state.archivedMembers||{}))if(sourceProfileKey(speakerSourceName(archived))===key){archived.sourceName=source;archived.name=display;archived.color=color;archived.avatar=avatar}
+    }
+    cleanupSpeakerMemoryArtifacts();renderAll(false);scheduleSave();const suffix=skipped?` · 잘못된 항목 ${skipped.toLocaleString('ko-KR')}개 제외`:'';
+    toast(`화자 설정 ${remembered.toLocaleString('ko-KR')}개를 기억했습니다. 현재 화자 ${applied.toLocaleString('ko-KR')}명에 적용${suffix}`);
+  }catch(error){console.error(error);toast(error?.message||'화자 백업 파일을 읽지 못했습니다.','error',5000)}finally{$('#importSpeakersFile').value=''}
+}
+
+function applyRememberedSpeakerToNewMember(){
+  const input=$('#memberName');if(!input||editingMemberId)return;
+  const source=normalizeRegularName(input.value||''),key=source?sourceProfileKey(source):'';
+  if(!source||!isSpeakerMemoryNameSafe(source)){newMemberMemoryKey='';return}
+  const remembered=rememberedSpeaker(source);if(!remembered||newMemberMemoryKey===key)return;
+  newMemberMemoryKey=key;$('#memberColor').value=safeColor(remembered.color,hashColor(source));$('#memberColorText').value=safeColor(remembered.color,hashColor(source));pendingAvatar=remembered.avatar||'';$('#avatarRemoveBtn').classList.toggle('hidden',!pendingAvatar);updateAvatarPreview();
+}
+
+function setupV33Controls(){
+  // No extra panel: sourceName is an internal stable key. Keep the editor visually unchanged.
+}
+
 async function init(){
   bindEvents();setupV5Controls();setupV8ImageHandling();setupOutgoingTellSetting();
   const saved=await dbGet();let oldVersion=0;
   if(saved&&saved.settings&&Array.isArray(saved.members)&&Array.isArray(saved.messages)){oldVersion=Number(saved.version||0);state={...structuredClone(DEFAULT_STATE),...saved,settings:{...DEFAULT_STATE.settings,...saved.settings},speakerProfiles:{...(saved.speakerProfiles||{})},archivedMembers:{...(saved.archivedMembers||{})}};if(oldVersion<5&&state.settings.fontPreset==='system')state.settings.fontPreset='pretendard'}
-  ensureSettings();ensureCompactState();cleanupSpeakerMemoryArtifacts();state.version=31;cleanStoredEmotes();seedSpeakerProfiles();
+  ensureSettings();ensureCompactState();if(oldVersion<33)migrateWorldSpeakerIdentities();cleanupSpeakerMemoryArtifacts();migrateStableSpeakerIdentities();state.version=33;cleanStoredEmotes();seedSpeakerProfiles();
   if(oldVersion&&oldVersion<8){const count=await optimizeStoredImages();if(count)toast(`기존 이미지 ${count.toLocaleString('ko-KR')}개를 128px 기준으로 최적화했습니다.`)}
   viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));renderAll(true);syncMobileTabs();updateAvatarPreview();
 }
 
-init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();setupV27Controls();setupV30Controls();setupV31Controls();updateMinimalCopy();});
+init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();setupV27Controls();setupV30Controls();setupV31Controls();setupV33Controls();updateMinimalCopy();});
 })();
 </script>
 </body>
