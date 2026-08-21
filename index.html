@@ -3233,6 +3233,98 @@ function applyRememberedSpeakerToNewMember(){
   newMemberMemoryKey=key;$('#memberColor').value=safeColor(remembered.color,hashColor(source));$('#memberColorText').value=safeColor(remembered.color,hashColor(source));pendingAvatar=remembered.avatar||'';$('#avatarRemoveBtn').classList.toggle('hidden',!pendingAvatar);updateAvatarPreview();
 }
 
+/* ==== v34 muted parenthetical text ==== */
+DEFAULT_STATE.version=34;
+
+function parentheticalHtmlRanges(html=''){
+  const source=String(html||''),stack=[],ranges=[];
+  let inTag=false,quote='';
+  for(let i=0;i<source.length;i++){
+    const ch=source[i];
+    if(inTag){
+      if(quote){if(ch===quote&&source[i-1]!=='\\')quote='';continue}
+      if(ch==='"'||ch==="'"){quote=ch;continue}
+      if(ch==='>')inTag=false;
+      continue;
+    }
+    if(ch==='<'){inTag=true;continue}
+    if(ch==='('||ch==='（'){stack.push({index:i,char:ch});continue}
+    if(ch===')'||ch==='）'){
+      if(!stack.length)continue;
+      const top=stack[stack.length-1],matches=(top.char==='('&&ch===')')||(top.char==='（'&&ch==='）');
+      if(!matches)continue;
+      const open=stack.pop();
+      if(!stack.length)ranges.push([open.index,i+1]);
+    }
+  }
+  return ranges;
+}
+function muteParentheticalHtml(html=''){
+  let source=String(html||'');const ranges=parentheticalHtmlRanges(source);if(!ranges.length)return source;
+  for(let i=ranges.length-1;i>=0;i--){const [start,end]=ranges[i];source=source.slice(0,start)+'<span class="paren-muted">'+source.slice(start,end)+'</span>'+source.slice(end)}
+  return source;
+}
+function shouldMuteParentheses(msg){return Boolean(msg)&&!isNonSpeakerType(msg.type)&&!isActionType(msg.type)}
+const v33GroupedMessageCopies=groupedMessageCopies;
+groupedMessageCopies=function(messages){
+  return v33GroupedMessageCopies(messages).map(msg=>shouldMuteParentheses(msg)?{...msg,html:muteParentheticalHtml(msg.html||'')}:msg);
+};
+
+function injectV34Styles(){
+  if(document.getElementById('v34-style'))return;
+  const style=document.createElement('style');style.id='v34-style';
+  style.textContent=`.bubble .paren-muted{color:var(--muted);opacity:.82}`;
+  document.head.append(style);
+}
+const v33CompactExportStyles=compactExportStyles;
+compactExportStyles=function(){return v33CompactExportStyles()+`.paren-muted{color:var(--muted);opacity:.82}`};
+const v33TistoryShadowStyles=tistoryShadowStyles;
+tistoryShadowStyles=function(){return v33TistoryShadowStyles()+`.paren-muted{color:var(--muted);opacity:.82}`};
+
+function drawPngParentheticalLines(ctx,lines,x,y,linePx,normalColor,mutedColor){
+  let depth=0;
+  for(let li=0;li<lines.length;li++){
+    const line=String(lines[li]??'');let cursor=x,buffer='',muted=depth>0;
+    const flush=()=>{if(!buffer)return;ctx.fillStyle=muted?mutedColor:normalColor;ctx.fillText(buffer,cursor,y+li*linePx);cursor+=ctx.measureText(buffer).width;buffer=''};
+    for(const ch of line){
+      if(ch==='('||ch==='（'){
+        if(depth===0){flush();muted=true}
+        depth++;buffer+=ch;continue;
+      }
+      if(ch===')'||ch==='）'){
+        if(depth>0){buffer+=ch;depth--;if(depth===0){flush();muted=false}continue}
+      }
+      buffer+=ch;
+    }
+    flush();
+  }
+}
+const v33RenderPngPage=renderPngPage;
+renderPngPage=async function(page,pageIndex,pageCount,layout,palette){
+  const needsCustom=page.items.some(item=>!item.isSpecial&&!item.isAction&&/[()（）]/.test(canvasPlainText(item.message?.html||'')));
+  if(!needsCustom)return v33RenderPngPage(page,pageIndex,pageCount,layout,palette);
+  const hideAvatars=Boolean(state.settings.hideAvatars),scale=Math.min(2,Math.max(1.25,window.devicePixelRatio||1.5)),canvas=document.createElement('canvas');
+  canvas.width=Math.round(layout.width*scale);canvas.height=Math.round(page.height*scale);const ctx=canvas.getContext('2d',{alpha:false});if(!ctx)throw new Error('이 브라우저에서 이미지 캔버스를 만들 수 없습니다.');
+  ctx.scale(scale,scale);ctx.textBaseline='top';ctx.fillStyle=palette.paper;ctx.fillRect(0,0,layout.width,page.height);const x=layout.margin;ctx.fillStyle=palette.accent;ctx.font=canvasFont(11,900);ctx.fillText('CHAT ARCHIVE',x,layout.margin);ctx.fillStyle=palette.text;ctx.font=canvasFont(29,850);ctx.fillText(state.settings.chatTitle||'채팅 백업',x,layout.margin+21);ctx.fillStyle=palette.muted;ctx.font=canvasFont(12,500);ctx.fillText(`${pageIndex+1} / ${pageCount}`,x,layout.margin+61);ctx.strokeStyle=palette.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,layout.contentTop-20);ctx.lineTo(layout.width-layout.margin,layout.contentTop-20);ctx.stroke();
+  for(const item of page.items){
+    const rowX=layout.margin,rowY=item.y,textX=hideAvatars?rowX:rowX+layout.avatarSize+layout.avatarGap;
+    if(item.isSpecial){
+      const centerX=layout.width/2;
+      if(item.specialType==='divider'){ctx.strokeStyle=palette.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(layout.margin,rowY+9);ctx.lineTo(layout.width-layout.margin,rowY+9);ctx.stroke();continue}
+      if(item.specialType==='location'||item.specialType==='time-note'){
+        const fontSize=Math.max(11,layout.fontSize-2);ctx.font=canvasFont(fontSize,600);ctx.fillStyle=palette.muted;item.lines.forEach((line,i)=>{const isTime=item.specialType==='time-note',iconWidth=isTime?15:ctx.measureText('⌖').width+4,textWidth=ctx.measureText(line).width,totalWidth=iconWidth+textWidth,y=rowY+i*layout.linePx+1,gap=12,startX=centerX-totalWidth/2,lineWidth=Math.max(24,(layout.width-layout.margin*2-totalWidth-gap*2)/2);ctx.strokeStyle=palette.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(layout.margin,y+fontSize*.55);ctx.lineTo(layout.margin+lineWidth,y+fontSize*.55);ctx.moveTo(layout.width-layout.margin-lineWidth,y+fontSize*.55);ctx.lineTo(layout.width-layout.margin,y+fontSize*.55);ctx.stroke();if(isTime){const cx=startX+5.5,cy=y+fontSize*.52,r=4.6;ctx.strokeStyle=palette.muted;ctx.lineWidth=1.1;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,cy-r*.57);ctx.moveTo(cx,cy);ctx.lineTo(cx+r*.47,cy-r*.27);ctx.stroke();ctx.fillText(line,startX+15,y)}else ctx.fillText(`⌖ ${line}`,startX,y)});continue;
+      }
+      const lineX=hideAvatars?layout.margin:layout.margin+layout.avatarSize+layout.avatarGap,textStart=lineX+15;ctx.strokeStyle=palette.line;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(lineX,rowY+2);ctx.lineTo(lineX,rowY+Math.max(18,item.height-4));ctx.stroke();ctx.font=canvasFont(Math.max(11,layout.fontSize-1),400,true);ctx.fillStyle=palette.muted;item.lines.forEach((line,i)=>ctx.fillText(line,textStart,rowY+4+i*layout.linePx));continue;
+    }
+    if(item.isAction){ctx.font=canvasFont(layout.fontSize,400,true);ctx.fillStyle=palette.muted;item.lines.forEach((line,i)=>ctx.fillText(line,rowX,rowY+i*layout.linePx));if(item.lines.length){ctx.font=canvasFont(layout.fontSize,700,true);ctx.fillStyle=safeColor(item.member.color,'#777');ctx.fillText(item.member.name,rowX,rowY)}}
+    else if(item.groupContinuation){ctx.font=canvasFont(layout.fontSize,400);drawPngParentheticalLines(ctx,item.lines,textX,rowY,layout.linePx,palette.text,palette.muted)}
+    else{if(!hideAvatars)drawPngAvatar(ctx,item,rowX,rowY,layout);ctx.font=canvasFont(layout.nameSize,850);ctx.fillStyle=safeColor(item.member.color,'#777');ctx.fillText(item.member.name,textX,rowY);const textY=rowY+layout.nameSize*1.35+3;ctx.font=canvasFont(layout.fontSize,400);drawPngParentheticalLines(ctx,item.lines,textX,textY,layout.linePx,palette.text,palette.muted)}
+    if(item.message.image){const textLines=item.lines.length*layout.linePx,imageY=rowY+(item.isAction?textLines:(item.groupContinuation?textLines:layout.nameSize*1.35+3+textLines))+10;if(item.image)drawRoundedCanvasImage(ctx,item.image,textX,imageY,item.imageWidth,item.imageHeight,12);else{ctx.font=canvasFont(12,500);ctx.fillStyle=palette.muted;ctx.fillText('첨부 이미지를 불러오지 못했습니다.',textX,imageY)}}
+  }
+  const blob=await canvasToPngBlob(canvas);canvas.width=1;canvas.height=1;return blob;
+};
+function setupV34Controls(){injectV34Styles();renderMessages(false)}
+
 function setupV33Controls(){
   // No extra panel: sourceName is an internal stable key. Keep the editor visually unchanged.
 }
@@ -3241,12 +3333,12 @@ async function init(){
   bindEvents();setupV5Controls();setupV8ImageHandling();setupOutgoingTellSetting();
   const saved=await dbGet();let oldVersion=0;
   if(saved&&saved.settings&&Array.isArray(saved.members)&&Array.isArray(saved.messages)){oldVersion=Number(saved.version||0);state={...structuredClone(DEFAULT_STATE),...saved,settings:{...DEFAULT_STATE.settings,...saved.settings},speakerProfiles:{...(saved.speakerProfiles||{})},archivedMembers:{...(saved.archivedMembers||{})}};if(oldVersion<5&&state.settings.fontPreset==='system')state.settings.fontPreset='pretendard'}
-  ensureSettings();ensureCompactState();if(oldVersion<33)migrateWorldSpeakerIdentities();cleanupSpeakerMemoryArtifacts();migrateStableSpeakerIdentities();state.version=33;cleanStoredEmotes();seedSpeakerProfiles();
+  ensureSettings();ensureCompactState();if(oldVersion<33)migrateWorldSpeakerIdentities();cleanupSpeakerMemoryArtifacts();migrateStableSpeakerIdentities();state.version=34;cleanStoredEmotes();seedSpeakerProfiles();
   if(oldVersion&&oldVersion<8){const count=await optimizeStoredImages();if(count)toast(`기존 이미지 ${count.toLocaleString('ko-KR')}개를 128px 기준으로 최적화했습니다.`)}
   viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));renderAll(true);syncMobileTabs();updateAvatarPreview();
 }
 
-init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();setupV27Controls();setupV30Controls();setupV31Controls();setupV33Controls();updateMinimalCopy();});
+init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();setupV27Controls();setupV30Controls();setupV31Controls();setupV33Controls();setupV34Controls();updateMinimalCopy();});
 })();
 </script>
 </body>
