@@ -150,6 +150,14 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .sample-peer{font-weight:600;color:var(--muted)}
 @media(max-width:520px){.tell-sender-controls{grid-template-columns:1fr}.tell-sender-controls button{width:100%}}
 </style>
+
+<style id="v28-style">
+.member-card-head{align-items:center}
+.member-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
+.member-head-actions .tiny-btn{white-space:nowrap}
+.member-head-actions .badge{flex:0 0 auto}
+@media(max-width:520px){.member-card-head{flex-wrap:wrap}.member-head-actions{margin-left:auto}}
+</style>
 </head>
 <body>
 <div class="app">
@@ -201,10 +209,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
     </article>
 
     <article class="card">
-      <div class="card-head"><div><div class="card-title">화자 관리</div></div><span class="badge" id="memberBadge">0명</span></div>
+      <div class="card-head member-card-head">
+        <div><div class="card-title">화자 관리</div></div>
+        <div class="member-head-actions"><button class="tiny-btn" id="exportSpeakersBtn" type="button">화자 저장</button><button class="tiny-btn" id="importSpeakersBtn" type="button">화자 불러오기</button><span class="badge" id="memberBadge">0명</span><input type="file" id="importSpeakersFile" accept=".json,application/json" class="hidden"></div>
+      </div>
       <div class="card-body">
         <div class="member-toolbar">
-          <button class="soft-btn" id="newMemberBtn" type="button">+ 새 화자</button>
+          <div class="member-toolbar-actions"><button class="soft-btn" id="newMemberBtn" type="button">+ 새 화자</button></div>
           <div class="field member-shape-field"><span class="label">아바타 모양</span><div class="segmented" id="avatarShape"><button class="active" data-shape="circle">원형</button><button data-shape="rounded">라운드 사각</button></div></div>
         </div>
         <div class="member-add-panel hidden" id="newMemberPanel">
@@ -258,6 +269,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
             <div class="field"><span class="label">아바타 크기 (px)</span><input class="input" id="avatarSize" type="number" min="24" max="96" step="1" value="42"></div>
           </div>
           <div class="field" style="margin-top:12px"><span class="label">아바타</span><div class="segmented" id="avatarVisibility"><button type="button" class="active" data-avatar-visibility="show">표시</button><button type="button" data-avatar-visibility="hide">숨김</button></div></div>
+          <div class="field" style="margin-top:12px"><span class="label">연속 화자</span><div class="segmented" id="speakerGrouping"><button type="button" class="active" data-speaker-grouping="off">각각 표시</button><button type="button" data-speaker-grouping="on">묶기</button></div></div>
           <div class="field" style="margin-top:12px" id="nameMaskField"><span class="label">화자 이름</span><div class="segmented" id="nameMaskMode"><button type="button" class="active" data-name-mask="show">표시</button><button type="button" data-name-mask="mask">▒로 가리기</button></div><details class="name-mask-exceptions hidden" id="nameMaskExceptions"><summary>예외 화자 <span id="nameMaskExceptionCount">0</span></summary><div class="name-mask-speaker-checks" id="nameMaskSpeakerChecks"></div></details></div>
           <div class="field" style="margin-top:12px"><span class="label">행간</span><input class="input" id="lineHeight" type="number" min="1.1" max="2.4" step="0.05" value="1.65"></div>
           <div class="field-row" style="margin-top:12px">
@@ -1204,10 +1216,12 @@ function measurePngItem(ctx,message,member,imageMap,layout){
 }
 function paginatePngItems(items,layout){
   const pages=[];let current=[],y=layout.contentTop;
-  const finish=()=>{if(!current.length)return;pages.push({items:current,height:Math.max(560,Math.ceil(y-layout.rowGap+layout.margin))});current=[];y=layout.contentTop};
+  const finish=()=>{if(!current.length)return;pages.push({items:current,height:Math.max(560,Math.ceil(y+layout.margin))});current=[];y=layout.contentTop};
   for(const item of items){
-    if(current.length&&y+item.height+layout.margin>layout.maxPageHeight)finish();
-    current.push({...item,y});y+=item.height+layout.rowGap;
+    let gapBefore=current.length?(item.groupContinuation?4:layout.rowGap):0;
+    let itemY=y+gapBefore;
+    if(current.length&&itemY+item.height+layout.margin>layout.maxPageHeight){finish();gapBefore=0;itemY=y}
+    current.push({...item,y:itemY});y=itemY+item.height;
     if(y>14000)throw new Error('한 메시지가 이미지 최대 높이를 초과했습니다. 해당 메시지를 나누어 주세요.');
   }
   finish();return pages;
@@ -2675,16 +2689,216 @@ function setupV25Controls(){
   });
   syncNameMaskControls();
 }
+
+/* ==== v27 consecutive speaker grouping + speaker library backup ==== */
+DEFAULT_STATE.version=28;
+DEFAULT_STATE.settings={...DEFAULT_STATE.settings,groupConsecutiveSpeakers:false};
+const v26EnsureSettings=ensureSettings;
+ensureSettings=function(){
+  v26EnsureSettings();
+  if(typeof state.settings.groupConsecutiveSpeakers!=='boolean')state.settings.groupConsecutiveSpeakers=false;
+};
+function isGroupableSpeakerMessage(msg){return Boolean(msg)&&!isNonSpeakerType(msg.type)&&!isActionType(msg.type)}
+function sameSpeakerForGrouping(a,b){
+  if(!isGroupableSpeakerMessage(a)||!isGroupableSpeakerMessage(b))return false;
+  const am=resolveMember(a),bm=resolveMember(b);
+  return profileKey(am?.name||'')===profileKey(bm?.name||'');
+}
+function groupedMessageCopies(messages){
+  ensureSettings();
+  if(!state.settings.groupConsecutiveSpeakers)return messages.map(m=>({...m,_groupContinuation:false}));
+  let previous=null;
+  return messages.map(message=>{
+    const continuation=Boolean(previous&&sameSpeakerForGrouping(previous,message));
+    const copy={...message,_groupContinuation:continuation};
+    previous=message;
+    return copy;
+  });
+}
+function syncSpeakerGroupingControls(){
+  ensureSettings();
+  $$('#speakerGrouping [data-speaker-grouping]').forEach(button=>button.classList.toggle('active',(button.dataset.speakerGrouping==='on')===state.settings.groupConsecutiveSpeakers));
+}
+const v26ApplySettings=applySettings;
+applySettings=function(){v26ApplySettings();syncSpeakerGroupingControls()};
+
+renderMessages=function(resetLimit=false){
+  if(resetLimit)visibleLimit=320;
+  const list=$('#chatList'),filtered=filteredMessages(),shown=filtered.slice(0,visibleLimit),displayRows=groupedMessageCopies(shown);
+  $('#messageCount').textContent=state.messages.length.toLocaleString('ko-KR');updateFilterCounts();list.textContent='';
+  if(!shown.length){
+    const canAdd=!$('#messageSearch').value.trim()&&!Object.keys(typeCountsFromMessages()).length;
+    list.innerHTML=`<div class="empty-state"><div><div class="empty-icon">💬</div><b>${state.messages.length?'조건에 맞는 항목이 없습니다':'아직 항목이 없어요'}</b><span>${state.messages.length?'검색어 또는 필터를 바꿔 보세요':'로그를 불러오거나 항목을 추가해 보세요'}</span>${canAdd?'<button class="soft-btn" id="emptyAddBtn" type="button">첫 항목 추가</button>':''}</div></div>`;
+    if(canAdd)$('#emptyAddBtn').onclick=()=>openInlineEditor('add','','say');return;
+  }
+  const frag=document.createDocumentFragment();
+  for(const msg of displayRows){
+    const row=document.createElement('div');row.className='chat-row type-'+msg.type;row.dataset.messageId=msg.id;
+    if(isNonSpeakerType(msg.type)){row.classList.add('special-row');row.innerHTML=renderSpecialRow(msg)}
+    else{
+      const mem=resolveMember(msg),shownName=displaySpeakerName(mem.name);
+      if(isActionType(msg.type))row.innerHTML=`<div class="action-row"><b style="color:${safeColor(mem.color)}">${escapeHTML(shownName)}</b>${actionGap(msg.actionText||stripHTML(msg.html))}${msg.actionText?escapeHTML(msg.actionText):msg.html}</div>${rowTools(msg.id)}`;
+      else if(msg._groupContinuation){
+        row.classList.add('grouped-continuation');
+        row.innerHTML=`<div class="chat-avatar grouped-avatar-placeholder" aria-hidden="true"></div><div class="chat-main"><div class="bubble">${msg.html}${msg.image?`<img class="attachment" alt="첨부 이미지" src="${escapeHTML(msg.image)}">`:''}</div>${rowTools(msg.id)}</div>`;
+      }else row.innerHTML=`${avatarHTML(mem)}<div class="chat-main"><div class="chat-name" style="color:${safeColor(mem.color)}">${escapeHTML(shownName)}</div><div class="bubble">${msg.html}${msg.image?`<img class="attachment" alt="첨부 이미지" src="${escapeHTML(msg.image)}">`:''}</div>${rowTools(msg.id)}</div>`;
+    }
+    frag.append(row);
+    if(inlineEditor.mode&&inlineEditor.anchorId===msg.id){const wrap=document.createElement('div');wrap.innerHTML=renderInlineEditor();frag.append(...wrap.childNodes)}
+  }
+  list.append(frag);
+  if(!inlineEditor.anchorId&&inlineEditor.mode==='add'){const wrap=document.createElement('div');wrap.innerHTML=renderInlineEditor();list.append(...wrap.childNodes)}
+  if(filtered.length>shown.length){const btn=document.createElement('button');btn.className='soft-btn load-more';btn.textContent=`더 불러오기 (${(filtered.length-shown.length).toLocaleString('ko-KR')}개 남음)`;btn.onclick=()=>{visibleLimit+=500;renderMessages(false)};list.append(btn)}
+  if(filtered.length!==state.messages.length){const note=document.createElement('div');note.className='filtered-note';note.textContent=`전체 ${state.messages.length.toLocaleString('ko-KR')}개 중 ${filtered.length.toLocaleString('ko-KR')}개 표시`;list.append(note)}
+};
+
+makeCompactExportData=function(messages){
+  ensureCompactState();
+  const hideAvatars=Boolean(state.settings.hideAvatars),assets=[],assetIndex=new Map(),texts=[],textIndex=new Map(),profiles=[],profileIndex=new Map(),prepared=groupedMessageCopies(messages);
+  const asset=src=>{if(!src)return-1;if(assetIndex.has(src))return assetIndex.get(src);const i=assets.length;assets.push(src);assetIndex.set(src,i);return i};
+  const textFor=html=>{const key=String(html||'');if(textIndex.has(key))return textIndex.get(key);const i=texts.length;texts.push(key);textIndex.set(key,i);return i};
+  const profileFor=msg=>{const m=resolveMember(msg),av=hideAvatars?-1:asset(m.avatar||''),name=escapeHTML(displaySpeakerName(m.name||'알 수 없음')),color=safeColor(m.color,'#777777'),key=name+'\u0000'+color+'\u0000'+av;if(profileIndex.has(key))return profileIndex.get(key);const i=profiles.length;profiles.push([name,color,av]);profileIndex.set(key,i);return i};
+  const rows=prepared.map(msg=>{
+    if(msg.type==='divider')return ['divider'];
+    if(isNonSpeakerType(msg.type))return [msg.type,textFor(msg.html||'')];
+    const p=profileFor(msg);
+    if(isActionType(msg.type))return ['action',p,textFor(msg.actionText?escapeHTML(msg.actionText):msg.html||'')];
+    const row=[msg._groupContinuation?'message-cont':'message',p,textFor(msg.html||'')];if(msg.image)row.push(asset(msg.image));return row;
+  });
+  return [profiles,rows,assets,texts];
+};
+const v26CompactExportStyles=compactExportStyles;
+compactExportStyles=function(){return v26CompactExportStyles()+`.r.cont{margin-top:-12px}.r.cont .v{visibility:hidden}.r.cont .n{display:none}`};
+const v26TistoryShadowStyles=tistoryShadowStyles;
+tistoryShadowStyles=function(){return v26TistoryShadowStyles()+`.cbx-r.cbx-cont{margin-top:-12px}.cbx-r.cbx-cont .cbx-v{visibility:hidden}.cbx-r.cbx-cont .cbx-n{display:none}`};
+
+exportedHTML=function(messages){
+  const data=makeCompactExportData(messages),json=JSON.stringify(data).replace(/</g,'\\u003c'),title=escapeHTML(state.settings.chatTitle||'채팅 백업'),count=messages.length.toLocaleString('ko-KR');
+  const js=`const D=JSON.parse(document.getElementById('d').textContent),P=D[0],M=D[1],A=D[2],T=D[3],C=document.getElementById('c'),H=v=>typeof v==='number'?T[v]:v;let i=0;function R(){let h='',e=Math.min(i+500,M.length);for(;i<e;i++){let q=M[i],k=q[0];if(k==='action'){let p=P[q[1]],b=H(q[2]);h+='<article class=a><b style="color:'+p[1]+'">'+p[0]+'</b>'+b+'</article>';continue}if(k==='message'||k==='message-cont'){let p=P[q[1]],b=H(q[2]),c=k==='message-cont',v=c?'<i class="v"></i>':(p[2]<0?'<i class="v e"></i>':'<i class=v><img data-a="'+p[2]+'"></i>'),x=q.length>3?'<img class=x data-a="'+q[3]+'" alt="첨부 이미지">':'',n=c?'':'<b class=n>'+p[0]+'</b>';h+='<article class="r'+(c?' cont':'')+'" style="--c:'+p[1]+'">'+v+'<div>'+n+'<div class=b>'+b+x+'</div></div></article>';continue}if(k==='divider'){h+='<article class="s s-d"></article>';continue}let b=H(q[1]);if(k==='narration')h+='<article class="s s-n"><div class=s-t>'+b+'</div></article>';else if(k==='location')h+='<article class="s s-meta"><span class=s-t><span class=s-i>⌖</span>'+b+'</span></article>';else if(k==='time-note')h+='<article class="s s-meta"><span class=s-t><span class="s-clock" aria-hidden="true"></span>'+b+'</span></article>';}C.insertAdjacentHTML('beforeend',h);C.querySelectorAll('img[data-a]').forEach(x=>{x.src=A[x.dataset.a];x.removeAttribute('data-a')});if(i<M.length)requestAnimationFrame(R)}R();`;
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>${compactExportStyles()}</style></head><body><main><header><small>CHAT ARCHIVE</small><h1>${title}</h1><p>${count}개의 대화 기록</p></header><section id="c"></section></main><script id="d" type="application/json">${json}<\/script><script>${js}<\/script></body></html>`;
+};
+tistoryFragment=function(messages){
+  const data=makeCompactExportData(messages),json=JSON.stringify(data).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029'),rootId='cbx-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8),title=escapeHTML(state.settings.chatTitle||'채팅 백업'),count=messages.length.toLocaleString('ko-KR'),css=JSON.stringify(tistoryShadowStyles()).replace(/</g,'\\u003c'),header=`<div class="cbx-h"><span class="cbx-k">CHAT ARCHIVE</span><strong class="cbx-t">${title}</strong><span class="cbx-count">${count}개의 대화 기록</span></div><section class="cbx-c" id="cbx-c"></section>`,headerJSON=JSON.stringify(header).replace(/</g,'\\u003c');
+  const js=`(()=>{const H=document.getElementById('${rootId}');if(!H||H.shadowRoot)return;const S=H.attachShadow({mode:'open'}),D=${json},P=D[0],M=D[1],A=D[2],T=D[3],G=v=>typeof v==='number'?T[v]:v;S.innerHTML='<style>'+${css}+'</style><div class="cbx">'+${headerJSON}+'</div>';const C=S.getElementById('cbx-c');let i=0;function R(){let h='',e=Math.min(i+500,M.length);for(;i<e;i++){let q=M[i],k=q[0];if(k==='action'){let p=P[q[1]],b=G(q[2]);h+='<article class="cbx-a"><b style="color:'+p[1]+'">'+p[0]+'</b>'+b+'</article>';continue}if(k==='message'||k==='message-cont'){let p=P[q[1]],b=G(q[2]),c=k==='message-cont',v=c?'<i class="cbx-v"></i>':(p[2]<0?'<i class="cbx-v cbx-e"></i>':'<i class="cbx-v"><img data-a="'+p[2]+'" alt=""></i>'),x=q.length>3?'<img class="cbx-x" data-a="'+q[3]+'" alt="첨부 이미지">':'',n=c?'':'<b class="cbx-n">'+p[0]+'</b>';h+='<article class="cbx-r'+(c?' cbx-cont':'')+'" style="--c:'+p[1]+'">'+v+'<div class="cbx-body">'+n+'<div class="cbx-b">'+b+x+'</div></div></article>';continue}if(k==='divider'){h+='<article class="cbx-s cbx-s-d"></article>';continue}let b=G(q[1]);if(k==='narration')h+='<article class="cbx-s cbx-s-n"><div class="cbx-s-t">'+b+'</div></article>';else if(k==='location')h+='<article class="cbx-s cbx-s-meta"><span class="cbx-s-t"><span class="cbx-s-i">⌖</span>'+b+'</span></article>';else if(k==='time-note')h+='<article class="cbx-s cbx-s-meta"><span class="cbx-s-t"><span class="cbx-s-clock" aria-hidden="true"></span>'+b+'</span></article>';}C.insertAdjacentHTML('beforeend',h);C.querySelectorAll('img[data-a]').forEach(x=>{x.src=A[x.dataset.a];x.removeAttribute('data-a')});if(i<M.length)requestAnimationFrame(R)}R()})();`;
+  return `<div id="${rootId}" style="display:block;max-width:100%">대화를 불러오는 중…</div><script>${js}<\/script>`;
+};
+
+const v26MeasurePngItem=measurePngItem;
+measurePngItem=function(ctx,message,member,imageMap,layout){
+  const item=v26MeasurePngItem(ctx,message,member,imageMap,layout);
+  if(!message._groupContinuation||item.isSpecial||item.isAction)return item;
+  item.groupContinuation=true;
+  const textHeight=Math.max(layout.linePx,item.lines.length*layout.linePx);let height=textHeight;
+  if(message.image)height+=10+(item.image?item.imageHeight:layout.linePx);
+  item.height=Math.ceil(height);return item;
+};
+renderPngPage=async function(page,pageIndex,pageCount,layout,palette){
+  const hideAvatars=Boolean(state.settings.hideAvatars),scale=Math.min(2,Math.max(1.25,window.devicePixelRatio||1.5)),canvas=document.createElement('canvas');
+  canvas.width=Math.round(layout.width*scale);canvas.height=Math.round(page.height*scale);const ctx=canvas.getContext('2d',{alpha:false});if(!ctx)throw new Error('이 브라우저에서 이미지 캔버스를 만들 수 없습니다.');
+  ctx.scale(scale,scale);ctx.textBaseline='top';ctx.fillStyle=palette.paper;ctx.fillRect(0,0,layout.width,page.height);const x=layout.margin;ctx.fillStyle=palette.accent;ctx.font=canvasFont(11,900);ctx.fillText('CHAT ARCHIVE',x,layout.margin);ctx.fillStyle=palette.text;ctx.font=canvasFont(29,850);ctx.fillText(state.settings.chatTitle||'채팅 백업',x,layout.margin+21);ctx.fillStyle=palette.muted;ctx.font=canvasFont(12,500);ctx.fillText(`${pageIndex+1} / ${pageCount}`,x,layout.margin+61);ctx.strokeStyle=palette.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,layout.contentTop-20);ctx.lineTo(layout.width-layout.margin,layout.contentTop-20);ctx.stroke();
+  for(const item of page.items){
+    const rowX=layout.margin,rowY=item.y,textX=hideAvatars?rowX:rowX+layout.avatarSize+layout.avatarGap;
+    if(item.isSpecial){
+      const centerX=layout.width/2;
+      if(item.specialType==='divider'){ctx.strokeStyle=palette.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(layout.margin,rowY+9);ctx.lineTo(layout.width-layout.margin,rowY+9);ctx.stroke();continue}
+      if(item.specialType==='location'||item.specialType==='time-note'){
+        const fontSize=Math.max(11,layout.fontSize-2);ctx.font=canvasFont(fontSize,600);ctx.fillStyle=palette.muted;item.lines.forEach((line,i)=>{const isTime=item.specialType==='time-note',iconWidth=isTime?15:ctx.measureText('⌖').width+4,textWidth=ctx.measureText(line).width,totalWidth=iconWidth+textWidth,y=rowY+i*layout.linePx+1,gap=12,startX=centerX-totalWidth/2,lineWidth=Math.max(24,(layout.width-layout.margin*2-totalWidth-gap*2)/2);ctx.strokeStyle=palette.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(layout.margin,y+fontSize*.55);ctx.lineTo(layout.margin+lineWidth,y+fontSize*.55);ctx.moveTo(layout.width-layout.margin-lineWidth,y+fontSize*.55);ctx.lineTo(layout.width-layout.margin,y+fontSize*.55);ctx.stroke();if(isTime){const cx=startX+5.5,cy=y+fontSize*.52,r=4.6;ctx.strokeStyle=palette.muted;ctx.lineWidth=1.1;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,cy-r*.57);ctx.moveTo(cx,cy);ctx.lineTo(cx+r*.47,cy-r*.27);ctx.stroke();ctx.fillText(line,startX+15,y)}else ctx.fillText(`⌖ ${line}`,startX,y)});continue;
+      }
+      const lineX=hideAvatars?layout.margin:layout.margin+layout.avatarSize+layout.avatarGap,textStart=lineX+15;ctx.strokeStyle=palette.line;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(lineX,rowY+2);ctx.lineTo(lineX,rowY+Math.max(18,item.height-4));ctx.stroke();ctx.font=canvasFont(Math.max(11,layout.fontSize-1),400,true);ctx.fillStyle=palette.muted;item.lines.forEach((line,i)=>ctx.fillText(line,textStart,rowY+4+i*layout.linePx));continue;
+    }
+    if(item.isAction){ctx.font=canvasFont(layout.fontSize,400,true);ctx.fillStyle=palette.muted;item.lines.forEach((line,i)=>ctx.fillText(line,rowX,rowY+i*layout.linePx));if(item.lines.length){ctx.font=canvasFont(layout.fontSize,700,true);ctx.fillStyle=safeColor(item.member.color,'#777');ctx.fillText(item.member.name,rowX,rowY)}}
+    else if(item.groupContinuation){ctx.font=canvasFont(layout.fontSize,400);ctx.fillStyle=palette.text;item.lines.forEach((line,i)=>ctx.fillText(line,textX,rowY+i*layout.linePx))}
+    else{if(!hideAvatars)drawPngAvatar(ctx,item,rowX,rowY,layout);ctx.font=canvasFont(layout.nameSize,850);ctx.fillStyle=safeColor(item.member.color,'#777');ctx.fillText(item.member.name,textX,rowY);const textY=rowY+layout.nameSize*1.35+3;ctx.font=canvasFont(layout.fontSize,400);ctx.fillStyle=palette.text;item.lines.forEach((line,i)=>ctx.fillText(line,textX,textY+i*layout.linePx))}
+    if(item.message.image){const textLines=item.lines.length*layout.linePx,imageY=rowY+(item.isAction?textLines:(item.groupContinuation?textLines:layout.nameSize*1.35+3+textLines))+10;if(item.image)drawRoundedCanvasImage(ctx,item.image,textX,imageY,item.imageWidth,item.imageHeight,12);else{ctx.font=canvasFont(12,500);ctx.fillStyle=palette.muted;ctx.fillText('첨부 이미지를 불러오지 못했습니다.',textX,imageY)}}
+  }
+  const blob=await canvasToPngBlob(canvas);canvas.width=1;canvas.height=1;return blob;
+};
+exportImagesZip=async function(messages){
+  clearPngZipReady();setProgress(0,'이미지 준비 중','화자와 첨부 이미지를 확인합니다.');const cache=new Map(),objectUrls=[];
+  try{
+    try{await document.fonts?.ready}catch{}
+    const prepared=groupedMessageCopies(messages),hideAvatars=Boolean(state.settings.hideAvatars),memberMap=new Map(state.members.map(m=>[m.id,m])),sources=new Set();
+    for(const message of prepared){const member=memberMap.get(message.memberId)||message.senderSnapshot||{id:'unknown',name:'알 수 없음',color:'#777',avatar:''};if(!hideAvatars&&!message._groupContinuation&&member.avatar)sources.add(member.avatar);if(message.image)sources.add(message.image)}
+    const sourceList=[...sources],imageMap=new Map();let skippedImages=0;
+    for(let i=0;i<sourceList.length;i+=8){const batch=sourceList.slice(i,i+8),results=await Promise.all(batch.map(src=>loadCanvasImage(src,cache,objectUrls)));results.forEach((image,j)=>{imageMap.set(batch[j],image);if(!image)skippedImages++});setProgress(sourceList.length?Math.round(((i+batch.length)/sourceList.length)*12):12,'이미지 준비 중',`${Math.min(i+batch.length,sourceList.length)} / ${sourceList.length}`)}
+    const layout={width:900,margin:40,maxPageHeight:2600,contentTop:128,rowGap:17,avatarGap:hideAvatars?0:12,avatarSize:hideAvatars?0:Math.max(24,Number(state.settings.avatarSize||42)),fontSize:Math.max(10,Number(state.settings.fontSize||16)),nameSize:Math.max(12,Number(state.settings.fontSize||16)-1)};layout.linePx=layout.fontSize*Math.max(1.1,Number(state.settings.lineHeight||1.65));layout.contentWidth=layout.width-layout.margin*2-layout.avatarSize-layout.avatarGap;
+    const measure=document.createElement('canvas').getContext('2d');if(!measure)throw new Error('텍스트 크기를 계산할 수 없습니다.');
+    const items=prepared.map(message=>{const member=memberMap.get(message.memberId)||message.senderSnapshot||{name:'알 수 없음',color:'#777',avatar:''},displayMember=displaySpeakerMember(member),item=measurePngItem(measure,message,displayMember,imageMap,layout);item.avatarImage=!hideAvatars&&!message._groupContinuation&&member.avatar?(imageMap.get(member.avatar)||null):null;return item});
+    const pages=paginatePngItems(items,layout);if(!pages.length)throw new Error('내보낼 페이지가 없습니다.');const palette=pngExportPalette(),files=[];setProgress(15,'PNG 만드는 중',`${pages.length}개 페이지로 나누어 저장합니다.`);
+    for(let i=0;i<pages.length;i++){const blob=await renderPngPage(pages[i],i,pages.length,layout,palette);if(!blob)throw new Error('PNG 변환에 실패했습니다.');files.push({name:`${filenameBase()}_${String(i+1).padStart(3,'0')}.png`,blob});setProgress(15+Math.round(((i+1)/pages.length)*75),'PNG 만드는 중',`${i+1} / ${pages.length}`);await new Promise(r=>setTimeout(r,0))}
+    setProgress(93,'ZIP 묶는 중','PNG 파일을 하나로 묶고 있습니다.');const zip=await makeZip(files),name=filenameBase()+'_images.zip';showPngZipReady(zip,name,pages.length,skippedImages);
+  }catch(error){console.error(error);endProgress();toast(`이미지 ZIP을 만들지 못했습니다. ${error?.message||'브라우저 환경을 확인해 주세요.'}`,'error',6200)}finally{objectUrls.forEach(url=>URL.revokeObjectURL(url))}
+};
+
+function collectSpeakerLibrary(){
+  ensureSettings();ensureCompactState();const map=new Map();
+  const add=p=>{const name=normalizeRegularName(p?.name||'');if(!name)return;map.set(profileKey(name),{name,color:safeColor(p?.color,hashColor(name)),avatar:String(p?.avatar||'')})};
+  Object.values(state.speakerProfiles||{}).forEach(add);Object.values(state.archivedMembers||{}).forEach(add);state.members.forEach(add);
+  return [...map.values()].sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+}
+function exportSpeakerLibrary(){
+  const speakers=collectSpeakerLibrary();if(!speakers.length){toast('저장할 화자가 없습니다.','warn');return}
+  const payload={kind:'chat-speaker-library',version:1,exportedAt:new Date().toISOString(),speakers};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'}),stamp=new Date().toISOString().slice(0,10).replaceAll('-','');downloadBlob(blob,`chat-speakers-${stamp}.json`);toast(`화자 ${speakers.length.toLocaleString('ko-KR')}명을 저장했습니다.`);
+}
+async function importSpeakerLibrary(file){
+  if(!file)return;
+  try{
+    const parsed=JSON.parse(await file.text()),items=Array.isArray(parsed)?parsed:Array.isArray(parsed?.speakers)?parsed.speakers:null;if(!items)throw new Error('화자 백업 파일 형식이 아닙니다.');
+    let added=0,updated=0;ensureSettings();ensureCompactState();
+    for(const raw of items){const name=normalizeRegularName(raw?.name||'');if(!name)continue;const key=profileKey(name),color=safeColor(raw?.color,hashColor(name)),avatar=typeof raw?.avatar==='string'?raw.avatar:'',profile={name,color,avatar};state.speakerProfiles[key]=profile;const current=state.members.find(m=>profileKey(m.name)===key);if(current){current.name=name;current.color=color;current.avatar=avatar;updated++;for(const msg of state.messages.filter(x=>x.memberId===current.id))if(msg.senderSnapshot)msg.senderSnapshot={name,color,avatar}}
+      else{const member={id:uid(),name,color,avatar};state.members.push(member);viewMembers.add(member.id);added++}
+      for(const archived of Object.values(state.archivedMembers||{}))if(profileKey(archived.name)===key){archived.name=name;archived.color=color;archived.avatar=avatar}
+    }
+    renderAll(false);toast(`화자 설정을 불러왔습니다. 추가 ${added.toLocaleString('ko-KR')}명 · 갱신 ${updated.toLocaleString('ko-KR')}명`);
+  }catch(error){console.error(error);toast(error?.message||'화자 백업 파일을 읽지 못했습니다.','error',5000)}finally{$('#importSpeakersFile').value=''}
+}
+function injectV27Styles(){
+  if(document.getElementById('v27-style'))return;const style=document.createElement('style');style.id='v27-style';style.textContent=`.member-toolbar-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.grouped-continuation{margin-top:-11px}.grouped-continuation .grouped-avatar-placeholder{visibility:hidden;pointer-events:none}.grouped-continuation .bubble{padding-top:0}html[data-hide-avatars="true"] .grouped-continuation .grouped-avatar-placeholder{display:none}@media(max-width:620px){.member-toolbar-actions{width:100%}}`;document.head.append(style);
+}
+function setupV27Controls(){
+  injectV27Styles();ensureSettings();syncSpeakerGroupingControls();
+  $$('#speakerGrouping [data-speaker-grouping]').forEach(button=>button.onclick=()=>{state.settings.groupConsecutiveSpeakers=button.dataset.speakerGrouping==='on';applySettings();renderMessages(false);scheduleSave()});
+  $('#exportSpeakersBtn').onclick=exportSpeakerLibrary;$('#importSpeakersBtn').onclick=()=>$('#importSpeakersFile').click();$('#importSpeakersFile').onchange=e=>importSpeakerLibrary(e.target.files?.[0]);
+}
+
+
+/* ==== v30 grouped row spacing: remove invisible avatar height ==== */
+const v29CompactExportStyles=compactExportStyles;
+compactExportStyles=function(){
+  const base=v29CompactExportStyles();
+  return base+`.r.cont{margin-top:-12px!important;min-height:0!important}.r.cont .v{visibility:hidden!important;height:0!important;min-height:0!important;overflow:hidden!important}.r.cont>div{min-height:0}`;
+};
+const v29TistoryShadowStyles=tistoryShadowStyles;
+tistoryShadowStyles=function(){
+  const base=v29TistoryShadowStyles();
+  return base+`.cbx-r.cbx-cont{margin-top:-12px!important;min-height:0!important}.cbx-r.cbx-cont .cbx-v{visibility:hidden!important;height:0!important;min-height:0!important;overflow:hidden!important}.cbx-r.cbx-cont .cbx-body{min-height:0}`;
+};
+function injectV30Styles(){
+  if(document.getElementById('v30-style'))return;
+  const style=document.createElement('style');
+  style.id='v30-style';
+  style.textContent=`
+.grouped-continuation{margin-top:-11px!important;min-height:0!important;padding-top:0!important;padding-bottom:0!important;align-items:start!important}
+.grouped-continuation .grouped-avatar-placeholder{visibility:hidden!important;height:0!important;min-height:0!important;overflow:hidden!important;align-self:start!important}
+.grouped-continuation .chat-main{padding-top:0!important;min-height:0!important}
+.grouped-continuation .bubble{padding-top:0!important}
+html[data-hide-avatars="true"] .grouped-continuation{display:block!important}
+`;
+  document.head.append(style);
+}
+function setupV30Controls(){injectV30Styles()}
+
 async function init(){
   bindEvents();setupV5Controls();setupV8ImageHandling();setupOutgoingTellSetting();
   const saved=await dbGet();let oldVersion=0;
   if(saved&&saved.settings&&Array.isArray(saved.members)&&Array.isArray(saved.messages)){oldVersion=Number(saved.version||0);state={...structuredClone(DEFAULT_STATE),...saved,settings:{...DEFAULT_STATE.settings,...saved.settings},speakerProfiles:{...(saved.speakerProfiles||{})},archivedMembers:{...(saved.archivedMembers||{})}};if(oldVersion<5&&state.settings.fontPreset==='system')state.settings.fontPreset='pretendard'}
-  ensureSettings();ensureCompactState();state.version=26;cleanStoredEmotes();seedSpeakerProfiles();
+  ensureSettings();ensureCompactState();state.version=30;cleanStoredEmotes();seedSpeakerProfiles();
   if(oldVersion&&oldVersion<8){const count=await optimizeStoredImages();if(count)toast(`기존 이미지 ${count.toLocaleString('ko-KR')}개를 128px 기준으로 최적화했습니다.`)}
   viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));renderAll(true);syncMobileTabs();updateAvatarPreview();
 }
 
-init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();updateMinimalCopy();});
+init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();setupV27Controls();setupV30Controls();updateMinimalCopy();});
 })();
 </script>
 </body>
