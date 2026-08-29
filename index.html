@@ -3346,6 +3346,61 @@ function injectV35Styles(){
 }
 function setupV35Controls(){injectV35Styles();renderMessages(false)}
 
+
+
+/* ==== v36 attachment image links ==== */
+function resetMessageForm(){inlineEditor={mode:'',anchorId:'',memberId:'',newMemberName:'',speakerName:'',content:'',image:'',imageLinkOpen:false,imageLinkValue:'',type:'say'}}
+const v35OpenInlineEditorV36=openInlineEditor;
+openInlineEditor=function(mode,id='',forcedType=''){
+  v35OpenInlineEditorV36(mode,id,forcedType);
+  inlineEditor.imageLinkOpen=Boolean(inlineEditor.image&&/^https?:\/\//i.test(String(inlineEditor.image)));
+  inlineEditor.imageLinkValue=inlineEditor.imageLinkOpen?String(inlineEditor.image):'';
+};
+renderInlineEditor=function(){
+  if(!inlineEditor.mode)return '';
+  const type=inlineEditor.type||'say',speakerMode=usesSpeaker(type),actionMode=isActionType(type),category=speakerMode?'dialogue':'narration';
+  const categoryButtons=`<div class="inline-type-grid inline-category-grid"><button type="button" class="inline-type-btn ${category==='dialogue'?'active':''}" data-inline-category="dialogue">대화</button><button type="button" class="inline-type-btn ${category==='narration'?'active':''}" data-inline-category="narration">나레이션</button></div>`;
+  const speakerTypes=sortedTypes(new Set(['say','shout','yell','party','alliance','free','tell-from','tell-to','emote-custom',...state.messages.filter(m=>usesSpeaker(m.type)).map(m=>m.type)]))
+    .filter(t=>usesSpeaker(t)).map(t=>`<option value="${escapeHTML(t)}" ${t===type?'selected':''}>${escapeHTML(typeLabel(t))}</option>`).join('');
+  const memberOptions=state.members.map(m=>`<option value="${escapeHTML(m.id)}" ${m.id===inlineEditor.memberId?'selected':''}>${escapeHTML(m.name)}</option>`).join('');
+  const speakerFields=speakerMode?`<div class="field-row"><div class="field"><span class="label">화자</span><div class="inline-speaker-picker"><select class="select" id="inlineMember">${memberOptions||'<option value="">화자 없음</option>'}</select></div></div><div class="field"><span class="label">유형</span><select class="select" id="inlineSpeakerType">${speakerTypes}</select></div></div>`:'';
+  const narrationFields=!speakerMode?`<div class="field"><span class="label">형식</span><select class="select" id="inlineNarrationType"><option value="narration" ${type==='narration'?'selected':''}>나레이션</option><option value="location" ${type==='location'?'selected':''}>장소</option><option value="time-note" ${type==='time-note'?'selected':''}>시간</option><option value="divider" ${type==='divider'?'selected':''}>가로선</option></select></div>`:'';
+  const contentField=type==='divider'?`<div class="divider-insert-preview" aria-label="긴 가로선 미리보기"><span></span></div>`:`<div class="field"><span class="label">내용</span><textarea class="textarea" id="inlineContent" placeholder="${escapeHTML(manualTypePlaceholder(type))}">${escapeHTML(inlineEditor.content||'')}</textarea></div>`;
+  const linkOpen=Boolean(inlineEditor.imageLinkOpen);
+  const hasImage=Boolean(inlineEditor.image);
+  const imageStatus=hasImage?(String(inlineEditor.image).startsWith('http')?'링크 첨부됨':'첨부됨'):'없음';
+  const imageField=speakerMode&&!actionMode?`<div class="field"><span class="label">이미지 첨부 (선택)</span><div class="inline-image-actions"><button class="soft-btn" id="inlineImageBtn" type="button">파일</button><button class="soft-btn" id="inlineImageLinkBtn" type="button">링크</button><span class="badge" id="inlineImageName">${imageStatus}</span><button class="tiny-btn ${hasImage?'':'hidden'}" id="inlineImageRemove" type="button">×</button><input class="hidden" type="file" id="inlineImage" accept="image/*"></div><div class="inline-link-row ${linkOpen?'':'hidden'}" id="inlineImageLinkRow"><input class="input" id="inlineImageLinkInput" value="${escapeHTML(inlineEditor.imageLinkValue||'')}" placeholder="https://example.com/image.png"><button class="soft-btn" id="inlineImageLinkApply" type="button">등록</button></div></div>`:'';
+  return `<div class="inline-editor-wrap" data-inline-wrap><div></div><div class="inline-editor">${categoryButtons}${speakerFields}${narrationFields}${contentField}${imageField}<div class="inline-editor-preview">${inlineEditor.mode==='edit'?'수정 중':category==='dialogue'?'대화 추가':'나레이션 추가'}</div><div class="form-actions"><button class="primary-btn" id="inlineSave" type="button">${inlineEditor.mode==='edit'?'수정 저장':'추가'}</button><button class="soft-btn" id="inlineCancel" type="button">취소</button></div></div></div>`;
+};
+function injectV36Styles(){
+  if(document.getElementById('v36-style'))return;
+  const style=document.createElement('style');style.id='v36-style';
+  style.textContent=`.inline-image-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.inline-link-row{display:flex;gap:8px;align-items:center;margin-top:8px}.inline-link-row .input{flex:1 1 260px;min-width:0}@media(max-width:680px){.inline-link-row{flex-direction:column;align-items:stretch}}`;
+  document.head.append(style);
+}
+function setupV36Controls(){
+  injectV36Styles();
+  const list=$('#chatList'); if(!list)return;
+  list.addEventListener('click',e=>{
+    if(e.target.id==='inlineImageLinkBtn'){
+      inlineEditor.imageLinkOpen=!inlineEditor.imageLinkOpen;
+      if(inlineEditor.imageLinkOpen&&!inlineEditor.imageLinkValue&&/^https?:\/\//i.test(String(inlineEditor.image||'')))inlineEditor.imageLinkValue=String(inlineEditor.image);
+      renderMessages(false);
+      setTimeout(()=>$('#inlineImageLinkInput')?.focus(),0);
+      return;
+    }
+    if(e.target.id==='inlineImageLinkApply'){
+      const input=$('#inlineImageLinkInput');
+      const url=String(input?.value||'').trim();
+      if(!/^https?:\/\//i.test(url)){toast('http 또는 https 이미지 주소를 입력해 주세요.','warn');return;}
+      inlineEditor.image=url;inlineEditor.imageLinkValue=url;inlineEditor.imageLinkOpen=true;renderMessages(false);toast('이미지 링크를 등록했습니다.');
+      return;
+    }
+  });
+  list.addEventListener('input',e=>{
+    if(e.target.id==='inlineImageLinkInput')inlineEditor.imageLinkValue=e.target.value;
+  });
+}
 function setupV33Controls(){
   // No extra panel: sourceName is an internal stable key. Keep the editor visually unchanged.
 }
@@ -3354,12 +3409,12 @@ async function init(){
   bindEvents();setupV5Controls();setupV8ImageHandling();setupOutgoingTellSetting();
   const saved=await dbGet();let oldVersion=0;
   if(saved&&saved.settings&&Array.isArray(saved.members)&&Array.isArray(saved.messages)){oldVersion=Number(saved.version||0);state={...structuredClone(DEFAULT_STATE),...saved,settings:{...DEFAULT_STATE.settings,...saved.settings},speakerProfiles:{...(saved.speakerProfiles||{})},archivedMembers:{...(saved.archivedMembers||{})}};if(oldVersion<5&&state.settings.fontPreset==='system')state.settings.fontPreset='pretendard'}
-  ensureSettings();ensureCompactState();if(oldVersion<33)migrateWorldSpeakerIdentities();cleanupSpeakerMemoryArtifacts();migrateStableSpeakerIdentities();state.version=35;cleanStoredEmotes();seedSpeakerProfiles();
+  ensureSettings();ensureCompactState();if(oldVersion<33)migrateWorldSpeakerIdentities();cleanupSpeakerMemoryArtifacts();migrateStableSpeakerIdentities();state.version=36;cleanStoredEmotes();seedSpeakerProfiles();
   if(oldVersion&&oldVersion<8){const count=await optimizeStoredImages();if(count)toast(`기존 이미지 ${count.toLocaleString('ko-KR')}개를 128px 기준으로 최적화했습니다.`)}
   viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));renderAll(true);syncMobileTabs();updateAvatarPreview();
 }
 
-init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();setupV27Controls();setupV30Controls();setupV31Controls();setupV33Controls();setupV34Controls();setupV35Controls();updateMinimalCopy();});
+init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();setupV27Controls();setupV30Controls();setupV31Controls();setupV33Controls();setupV34Controls();setupV35Controls();setupV36Controls();updateMinimalCopy();});
 })();
 </script>
 </body>
