@@ -185,7 +185,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <main class="workspace" id="workspace" data-mobile-view="editor">
   <section class="editor-pane">
     <article class="card">
-      <div class="card-head"><div><div class="card-title">로그 일괄 가져오기</div><div class="card-desc"></div></div><span class="badge accent">NEW</span></div>
+      <div class="card-head"><div><div class="card-title">로그 일괄 가져오기</div><div class="card-desc"></div></div></div>
       <div class="card-body">
         <div class="dropzone" id="dropzone"><strong>파일을 놓거나 클릭해 선택</strong><p>.html · .log · .txt</p><button class="soft-btn" type="button">파일 선택</button><input type="file" id="logFile" accept=".html,.htm,.log,.txt,text/html,text/plain"></div>
         <div class="import-filter-head">
@@ -197,14 +197,15 @@ button:disabled{opacity:.45;cursor:not-allowed}
           </div>
         </div>
         <div class="import-options" id="importTypeChecks"><div class="import-filter-empty">파일을 불러오면 로그에서 발견된 채팅 유형과 건수가 자동으로 표시됩니다.</div></div>
-        <div class="tell-sender-box" id="tellSenderBox">
+        <div class="tell-sender-box hidden" id="tellSenderBox">
           <div class="tell-sender-head"><span class="label">보내는 귓속말 화자</span><span class="tell-sender-status" id="tellSenderStatus">선택 안 됨</span></div>
           <div class="tell-sender-controls"><input class="input" id="outgoingTellSender" list="outgoingTellSenderList" placeholder="이름 입력" maxlength="60"><button class="soft-btn" id="applyTellSenderExisting" type="button">기존 메시지에 적용</button></div>
           <datalist id="outgoingTellSenderList"></datalist>
           <div class="tell-sender-note" id="tellSenderNote"></div>
         </div>
-        <div class="field" style="margin-top:12px"><span class="label">등록 방식</span><div class="segmented" id="importMode"><button class="active" data-mode="replace">기존 내용 교체</button><button data-mode="append">뒤에 이어 붙이기</button></div></div>
+        <div class="field hidden" id="importModeField" style="margin-top:12px"><span class="label">등록 방식</span><div class="segmented" id="importMode"><button class="active" data-mode="replace">기존 내용 교체</button><button data-mode="append">뒤에 이어 붙이기</button></div></div>
         <div class="parse-result hidden" id="parseResult"></div>
+        <div class="form-actions import-undo-actions"><button class="soft-btn hidden" id="undoImport" type="button">직전 가져오기 취소</button></div>
       </div>
     </article>
 
@@ -214,9 +215,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
         <div class="member-head-actions"><button class="tiny-btn" id="exportSpeakersBtn" type="button">화자 저장</button><button class="tiny-btn" id="importSpeakersBtn" type="button">화자 불러오기</button><span class="badge" id="memberBadge">0명</span><input type="file" id="importSpeakersFile" accept=".json,application/json" class="hidden"></div>
       </div>
       <div class="card-body">
-        <div class="member-toolbar">
+        <div class="member-toolbar member-toolbar-simple">
           <div class="member-toolbar-actions"><button class="soft-btn" id="newMemberBtn" type="button">+ 새 화자</button></div>
-          <div class="field member-shape-field"><span class="label">아바타 모양</span><div class="segmented" id="avatarShape"><button class="active" data-shape="circle">원형</button><button data-shape="rounded">라운드 사각</button></div></div>
         </div>
         <div class="member-add-panel hidden" id="newMemberPanel">
           <div class="member-form-grid">
@@ -258,27 +258,50 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
         <button class="advanced-toggle" id="advancedStyleToggle" type="button" aria-expanded="false"><span>고급 설정</span><span class="advanced-chevron">⌄</span></button>
         <div class="advanced-style-panel hidden" id="advancedStylePanel">
-          <div class="field"><span class="label">채팅 폰트</span><select class="select" id="fontPreset">
-            <option value="pretendard">Pretendard</option>
-            <option value="suit">SUIT</option>
-            <option value="system">시스템 고딕</option>
-            <option value="serif">명조</option>
-          </select></div>
-          <div class="field-row" style="margin-top:12px">
-            <div class="field"><span class="label">글자 크기 (px)</span><input class="input" id="fontSize" type="number" min="10" max="32" step="1" value="16"></div>
-            <div class="field"><span class="label">아바타 크기 (px)</span><input class="input" id="avatarSize" type="number" min="24" max="96" step="1" value="42"></div>
-          </div>
-          <div class="field" style="margin-top:12px"><span class="label">아바타</span><div class="segmented" id="avatarVisibility"><button type="button" class="active" data-avatar-visibility="show">표시</button><button type="button" data-avatar-visibility="hide">숨김</button></div></div>
-          <div class="field" style="margin-top:12px"><span class="label">연속 화자</span><div class="segmented" id="speakerGrouping"><button type="button" class="active" data-speaker-grouping="off">각각 표시</button><button type="button" data-speaker-grouping="on">묶기</button></div></div>
-          <div class="field" style="margin-top:12px" id="nameMaskField"><span class="label">화자 이름</span><div class="segmented" id="nameMaskMode"><button type="button" class="active" data-name-mask="show">표시</button><button type="button" data-name-mask="mask">▒로 가리기</button></div><details class="name-mask-exceptions hidden" id="nameMaskExceptions"><summary>예외 화자 <span id="nameMaskExceptionCount">0</span></summary><div class="name-mask-speaker-checks" id="nameMaskSpeakerChecks"></div></details></div>
-          <div class="field" style="margin-top:12px"><span class="label">행간</span><input class="input" id="lineHeight" type="number" min="1.1" max="2.4" step="0.05" value="1.65"></div>
-          <div class="field-row" style="margin-top:12px">
-            <div class="field"><span class="label">배경색</span><div class="color-row"><input class="color-input" id="bgColor" type="color" value="#f5f6f8"><input class="input" id="bgColorText" value="#f5f6f8" maxlength="7"></div></div>
-            <div class="field"><span class="label">채팅 영역색</span><div class="color-row"><input class="color-input" id="paperColor" type="color" value="#ffffff"><input class="input" id="paperColorText" value="#ffffff" maxlength="7"></div></div>
-          </div>
-          <div class="field"><span class="label">기본 글자색</span><div class="color-row"><input class="color-input" id="textColor" type="color" value="#222832"><input class="input" id="textColorText" value="#222832" maxlength="7"></div></div>
+          <section class="advanced-setting-group">
+            <div class="advanced-group-title">글자</div>
+            <div class="field"><span class="label">채팅 폰트</span><select class="select" id="fontPreset">
+              <option value="pretendard">Pretendard</option>
+              <option value="suit">SUIT</option>
+              <option value="system">시스템 고딕</option>
+              <option value="serif">명조</option>
+            </select></div>
+            <div class="field-row advanced-group-row">
+              <div class="field"><span class="label">글자 크기 (px)</span><input class="input" id="fontSize" type="number" min="10" max="32" step="1" value="16"></div>
+              <div class="field"><span class="label">행간</span><input class="input" id="lineHeight" type="number" min="1.1" max="2.4" step="0.05" value="1.65"></div>
+            </div>
+          </section>
+
+          <section class="advanced-setting-group">
+            <div class="advanced-group-title">아바타</div>
+            <div class="field"><span class="label">표시</span><div class="segmented" id="avatarVisibility"><button type="button" class="active" data-avatar-visibility="show">표시</button><button type="button" data-avatar-visibility="hide">숨김</button></div></div>
+            <div class="avatar-dependent" id="avatarDependentSettings">
+              <div class="field-row advanced-group-row">
+                <div class="field"><span class="label">크기 (px)</span><input class="input" id="avatarSize" type="number" min="24" max="96" step="1" value="42"></div>
+                <div class="field"><span class="label">모양</span><div class="segmented" id="avatarShape"><button class="active" data-shape="circle">원형</button><button data-shape="rounded">라운드 사각</button></div></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="advanced-setting-group">
+            <div class="advanced-group-title">대화 배치</div>
+            <div class="field"><span class="label">연속 화자</span><div class="segmented" id="speakerGrouping"><button type="button" class="active" data-speaker-grouping="off">각각 표시</button><button type="button" data-speaker-grouping="on">묶기</button></div></div>
+          </section>
+
+          <section class="advanced-setting-group">
+            <div class="advanced-group-title">개인정보</div>
+            <div class="field" id="nameMaskField"><span class="label">화자 이름</span><div class="segmented" id="nameMaskMode"><button type="button" class="active" data-name-mask="show">표시</button><button type="button" data-name-mask="mask">▒로 가리기</button></div><details class="name-mask-exceptions hidden" id="nameMaskExceptions"><summary>예외 화자 <span id="nameMaskExceptionCount">0</span></summary><div class="name-mask-speaker-checks" id="nameMaskSpeakerChecks"></div></details></div>
+          </section>
+
+          <section class="advanced-setting-group">
+            <div class="advanced-group-title">색상</div>
+            <div class="field-row advanced-group-row">
+              <div class="field"><span class="label">배경색</span><div class="color-row"><input class="color-input" id="bgColor" type="color" value="#f5f6f8"><input class="input" id="bgColorText" value="#f5f6f8" maxlength="7"></div></div>
+              <div class="field"><span class="label">채팅 영역색</span><div class="color-row"><input class="color-input" id="paperColor" type="color" value="#ffffff"><input class="input" id="paperColorText" value="#ffffff" maxlength="7"></div></div>
+            </div>
+            <div class="field advanced-group-last"><span class="label">기본 글자색</span><div class="color-row"><input class="color-input" id="textColor" type="color" value="#222832"><input class="input" id="textColorText" value="#222832" maxlength="7"></div></div>
+          </section>
         </div>
-        <div class="form-actions"><button class="danger-btn" id="resetAll" type="button">대화 초기화</button><button class="soft-btn hidden" id="undoImport" type="button">직전 가져오기 취소</button></div>
       </div>
     </article>
   </section>
@@ -304,11 +327,11 @@ button:disabled{opacity:.45;cursor:not-allowed}
 </div>
 
 <div class="modal-backdrop hidden" id="filterModal">
-  <div class="modal"><div class="modal-head"><div><div class="modal-title">표시할 메시지 유형</div><div class="card-desc">검색 및 내보내기 필터에 함께 적용됩니다.</div></div><button class="close-x" data-close="filterModal">×</button></div><div class="modal-body"><div class="import-options" id="viewTypeChecks"><div class="import-filter-empty">등록된 메시지 유형이 없습니다.</div></div><div class="form-actions"><button class="soft-btn" id="viewTypesAll" type="button">전체 선택</button><button class="soft-btn" id="viewTypesNone" type="button">전체 해제</button><button class="primary-btn" data-close="filterModal">적용</button></div></div></div>
+  <div class="modal"><div class="modal-head"><div><div class="modal-title">표시할 메시지 유형</div><div class="card-desc">검색 및 내보내기 필터에 함께 적용됩니다.</div></div><button class="close-x" data-close="filterModal">×</button></div><div class="modal-body"><div class="import-options" id="viewTypeChecks"><div class="import-filter-empty">등록된 메시지 유형이 없습니다.</div></div><div class="form-actions filter-live-actions"><button class="soft-btn" id="viewTypesAll" type="button">전체 선택</button><button class="soft-btn" id="viewTypesNone" type="button">전체 해제</button></div></div></div>
 </div>
 
 <div class="modal-backdrop hidden" id="speakerFilterModal">
-  <div class="modal"><div class="modal-head"><div><div class="modal-title">화자 필터</div></div><button class="close-x" data-close="speakerFilterModal">×</button></div><div class="modal-body"><div class="filter-search"><input class="input" id="speakerFilterSearch" placeholder="화자 검색"></div><div class="import-options speaker-filter-list" id="viewSpeakerChecks"><div class="import-filter-empty">등록된 화자가 없습니다.</div></div><div class="form-actions"><button class="soft-btn" id="viewSpeakersAll" type="button">전체</button><button class="soft-btn" id="viewSpeakersNone" type="button">해제</button><button class="primary-btn" data-close="speakerFilterModal">적용</button></div></div></div>
+  <div class="modal"><div class="modal-head"><div><div class="modal-title">화자 필터</div></div><button class="close-x" data-close="speakerFilterModal">×</button></div><div class="modal-body"><div class="filter-search"><input class="input" id="speakerFilterSearch" placeholder="화자 검색"></div><div class="import-options speaker-filter-list" id="viewSpeakerChecks"><div class="import-filter-empty">등록된 화자가 없습니다.</div></div><div class="form-actions filter-live-actions"><button class="soft-btn" id="viewSpeakersAll" type="button">전체</button><button class="soft-btn" id="viewSpeakersNone" type="button">해제</button></div></div></div>
 </div>
 
 <div class="modal-backdrop hidden" id="rangeDeleteModal">
@@ -316,7 +339,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 </div>
 
 <div class="modal-backdrop hidden" id="projectModal">
-  <div class="modal"><div class="modal-head"><div><div class="modal-title">작업 파일</div><div class="card-desc">편집 상태 전체를 JSON으로 보관하거나 다시 불러옵니다.</div></div><button class="close-x" data-close="projectModal">×</button></div><div class="modal-body"><div class="form-actions"><button class="primary-btn" id="saveProject">작업 파일 저장</button><button class="soft-btn" id="loadProjectBtn">작업 파일 불러오기</button><input class="hidden" id="loadProject" type="file" accept=".json,application/json"></div></div></div>
+  <div class="modal"><div class="modal-head"><div><div class="modal-title">작업 파일</div><div class="card-desc">편집 상태 전체를 저장하거나 다시 불러옵니다.</div></div><button class="close-x" data-close="projectModal">×</button></div><div class="modal-body"><div class="form-actions project-file-actions"><button class="primary-btn" id="saveProject">작업 파일 저장</button><button class="soft-btn" id="loadProjectBtn">작업 파일 불러오기</button><input class="hidden" id="loadProject" type="file" accept=".json,application/json"></div><div class="project-danger-zone"><span>현재 작업</span><button class="danger-btn" id="resetAll" type="button">대화 초기화</button></div></div></div>
 </div>
 
 <div class="modal-backdrop hidden" id="cropModal">
@@ -3401,6 +3424,261 @@ function setupV36Controls(){
     if(e.target.id==='inlineImageLinkInput')inlineEditor.imageLinkValue=e.target.value;
   });
 }
+
+
+/* ==== v37 UX/UI cleanup ==== */
+DEFAULT_STATE.version=37;
+function syncV37ImportUI(){
+  const hasPending=Boolean(pendingImport);
+  const selected=hasPending?selectedImportTypes():new Set();
+  const hasSelectedTell=hasPending&&pendingImport.messages.some(m=>m.type==='tell-to'&&selected.has('tell-to'));
+  const tellBox=$('#tellSenderBox');if(tellBox)tellBox.classList.toggle('hidden',!hasSelectedTell);
+  const existingTell=state.messages.some(m=>m.type==='tell-to');
+  const applyExisting=$('#applyTellSenderExisting');if(applyExisting)applyExisting.classList.toggle('hidden',!existingTell);
+  const modeField=$('#importModeField');
+  const needsMode=hasPending&&state.messages.length>0;
+  if(modeField)modeField.classList.toggle('hidden',!needsMode);
+  if(!needsMode){
+    importMode='replace';
+    $$('#importMode button').forEach(b=>b.classList.toggle('active',b.dataset.mode==='replace'));
+  }
+  const undo=$('#undoImport');
+  if(undo?.classList.contains('hidden'))undo.closest('.import-undo-actions')?.classList.add('hidden');
+  else undo?.closest('.import-undo-actions')?.classList.remove('hidden');
+}
+const v36RenderImportTypeChecksV37=renderImportTypeChecks;
+renderImportTypeChecks=function(){v36RenderImportTypeChecksV37();syncV37ImportUI()};
+const v36RenderParseResultV37=renderParseResult;
+renderParseResult=function(){v36RenderParseResultV37();syncV37ImportUI()};
+
+function syncV37AdvancedUI(){
+  const hidden=Boolean(state.settings?.hideAvatars);
+  $('#avatarDependentSettings')?.classList.toggle('hidden',hidden);
+}
+const v36ApplySettingsV37=applySettings;
+applySettings=function(){v36ApplySettingsV37();syncV37AdvancedUI()};
+
+// Restore direct new-speaker entry while keeping v36 image-link controls.
+renderInlineEditor=function(){
+  if(!inlineEditor.mode)return '';
+  const type=inlineEditor.type||'say',speakerMode=usesSpeaker(type),actionMode=isActionType(type),category=speakerMode?'dialogue':'narration';
+  const categoryButtons=`<div class="inline-type-grid inline-category-grid"><button type="button" class="inline-type-btn ${category==='dialogue'?'active':''}" data-inline-category="dialogue">대화</button><button type="button" class="inline-type-btn ${category==='narration'?'active':''}" data-inline-category="narration">나레이션</button></div>`;
+  const speakerTypes=sortedTypes(new Set(['say','shout','yell','party','alliance','free','tell-from','tell-to','emote-custom',...state.messages.filter(m=>usesSpeaker(m.type)).map(m=>m.type)]))
+    .filter(t=>usesSpeaker(t)).map(t=>`<option value="${escapeHTML(t)}" ${t===type?'selected':''}>${escapeHTML(typeLabel(t))}</option>`).join('');
+  const memberOptions=state.members.map(m=>`<option value="${escapeHTML(m.id)}" ${m.id===inlineEditor.memberId?'selected':''}>${escapeHTML(m.name)}</option>`).join('');
+  const speakerFields=speakerMode?`<div class="field-row"><div class="field"><span class="label">화자</span><div class="inline-speaker-picker"><select class="select" id="inlineMember">${memberOptions||'<option value="">기존 화자 없음</option>'}</select><span class="inline-or">또는</span><input class="input" id="inlineNewMember" value="${escapeHTML(inlineEditor.newMemberName||'')}" placeholder="새 화자 이름"></div></div><div class="field"><span class="label">유형</span><select class="select" id="inlineSpeakerType">${speakerTypes}</select></div></div>`:'';
+  const narrationFields=!speakerMode?`<div class="field"><span class="label">형식</span><select class="select" id="inlineNarrationType"><option value="narration" ${type==='narration'?'selected':''}>나레이션</option><option value="location" ${type==='location'?'selected':''}>장소</option><option value="time-note" ${type==='time-note'?'selected':''}>시간</option><option value="divider" ${type==='divider'?'selected':''}>가로선</option></select></div>`:'';
+  const contentField=type==='divider'?`<div class="divider-insert-preview" aria-label="긴 가로선 미리보기"><span></span></div>`:`<div class="field"><span class="label">내용</span><textarea class="textarea" id="inlineContent" placeholder="${escapeHTML(manualTypePlaceholder(type))}">${escapeHTML(inlineEditor.content||'')}</textarea></div>`;
+  const linkOpen=Boolean(inlineEditor.imageLinkOpen),hasImage=Boolean(inlineEditor.image);
+  const imageStatus=hasImage?(String(inlineEditor.image).startsWith('http')?'링크 첨부됨':'첨부됨'):'없음';
+  const imageField=speakerMode&&!actionMode?`<div class="field"><span class="label">이미지 첨부 (선택)</span><div class="inline-image-actions"><button class="soft-btn" id="inlineImageBtn" type="button">파일</button><button class="soft-btn" id="inlineImageLinkBtn" type="button">링크</button><span class="badge" id="inlineImageName">${imageStatus}</span><button class="tiny-btn ${hasImage?'':'hidden'}" id="inlineImageRemove" type="button">×</button><input class="hidden" type="file" id="inlineImage" accept="image/*"></div><div class="inline-link-row ${linkOpen?'':'hidden'}" id="inlineImageLinkRow"><input class="input" id="inlineImageLinkInput" value="${escapeHTML(inlineEditor.imageLinkValue||'')}" placeholder="https://example.com/image.png"><button class="soft-btn" id="inlineImageLinkApply" type="button">등록</button></div></div>`:'';
+  return `<div class="inline-editor-wrap" data-inline-wrap><div></div><div class="inline-editor">${categoryButtons}${speakerFields}${narrationFields}${contentField}${imageField}<div class="form-actions"><button class="primary-btn" id="inlineSave" type="button">${inlineEditor.mode==='edit'?'수정 저장':'추가'}</button><button class="soft-btn" id="inlineCancel" type="button">취소</button></div></div></div>`;
+};
+
+// Common actions live directly on desktop; destructive/ordering actions stay behind the menu.
+rowTools=function(id){return `<div class="row-tools"><div class="row-direct-actions"><button class="row-direct-add" data-msg-add="${id}" title="아래에 추가">＋</button><button class="row-direct-edit" data-msg-edit="${id}" title="수정">수정</button></div><button class="row-menu-toggle" data-msg-menu="${id}" title="더 보기">⋯</button><div class="row-menu-actions"><button class="row-mobile-primary" data-msg-add="${id}" title="아래에 추가">＋</button><button class="row-mobile-primary" data-msg-edit="${id}" title="수정">✎</button><button data-msg-up="${id}" title="위로">↑</button><button data-msg-down="${id}" title="아래로">↓</button><button data-msg-range="${id}" title="이전·이후 삭제">✂</button><button data-msg-delete="${id}" title="삭제">×</button></div></div>`};
+
+// Empty-state editor must survive renderMessages(); wrap the final renderer.
+const v36RenderMessagesV37=renderMessages;
+renderMessages=function(resetLimit=false){
+  v36RenderMessagesV37(resetLimit);
+  const list=$('#chatList');
+  if(inlineEditor.mode==='add'&&!inlineEditor.anchorId&&!state.messages.length&&!$('#messageSearch').value.trim()){
+    list.textContent='';
+    const wrap=document.createElement('div');wrap.innerHTML=renderInlineEditor();list.append(...wrap.childNodes);
+  }
+  syncV37ImportUI();
+};
+
+function injectV37Styles(){
+  if(document.getElementById('v37-style'))return;
+  const style=document.createElement('style');style.id='v37-style';style.textContent=`
+.import-undo-actions{margin-top:10px;justify-content:flex-start}.import-undo-actions .soft-btn{flex:0 0 auto}.import-undo-actions.hidden{display:none}.member-toolbar-simple{justify-content:flex-start}.member-toolbar-simple .member-toolbar-actions{width:auto}
+.advanced-style-panel{padding:0;overflow:hidden}.advanced-setting-group{padding:14px}.advanced-setting-group+.advanced-setting-group{border-top:1px solid var(--line)}.advanced-group-title{font-size:11px;font-weight:900;color:var(--muted);letter-spacing:.04em;margin-bottom:10px}.advanced-group-row{margin-top:10px}.advanced-group-last{margin-top:10px}.avatar-dependent.hidden{display:none!important}
+.project-file-actions{margin-top:0}.project-danger-zone{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}.project-danger-zone span{font-size:12px;font-weight:800;color:var(--muted)}.filter-live-actions{justify-content:flex-start}.filter-live-actions button{flex:0 0 auto}
+.row-direct-actions{display:flex;gap:3px}.row-mobile-primary{display:none!important}.row-tools .row-direct-edit{width:auto!important;min-width:48px!important;padding:0 10px!important;font-size:11px!important;font-weight:800;white-space:nowrap!important}.row-direct-add{font-size:16px!important}.row-tools{align-items:center!important}.row-menu-toggle{display:grid!important;place-items:center}
+@media(min-width:901px){.row-menu-actions{display:none!important;position:absolute!important;right:0!important;top:36px!important;padding:4px!important;border:1px solid var(--line)!important;border-radius:11px!important;background:var(--panel)!important;box-shadow:var(--shadow-sm)!important;white-space:nowrap}.row-tools.open .row-menu-actions{display:flex!important}.row-menu-toggle{display:grid!important}.row-tools{top:-4px!important}}
+@media(max-width:900px){.row-direct-actions{display:none!important}.row-mobile-primary{display:grid!important}.row-menu-actions{right:35px!important;top:0!important}.row-tools.open .row-menu-actions{display:flex!important}}
+@media(max-width:520px){.advanced-setting-group{padding:12px}.project-danger-zone{align-items:stretch;flex-direction:column}.project-danger-zone .danger-btn{width:100%}}
+`;
+  document.head.append(style);
+}
+function setupV37Controls(){
+  injectV37Styles();syncV37ImportUI();syncV37AdvancedUI();
+  $('#chatList')?.addEventListener('input',e=>{if(e.target.id==='inlineNewMember')inlineEditor.newMemberName=e.target.value});
+}
+
+
+
+/* ==== v38 row actions + drag reorder ==== */
+rowTools=function(id){return `<div class="row-tools"><div class="row-direct-actions"><button class="row-drag-handle" data-msg-drag="${id}" draggable="true" title="끌어서 이동" aria-label="끌어서 이동">⠿</button><button class="row-direct-add" data-msg-add="${id}" title="아래에 추가">＋</button><button class="row-direct-edit" data-msg-edit="${id}" title="수정">수정</button></div><button class="row-menu-toggle" data-msg-menu="${id}" title="더 보기">⋯</button><div class="row-menu-actions"><button class="row-mobile-primary" data-msg-add="${id}" title="아래에 추가">＋</button><button class="row-mobile-primary" data-msg-edit="${id}" title="수정">✎</button><button data-msg-up="${id}" title="한 칸 위로">↑</button><button data-msg-down="${id}" title="한 칸 아래로">↓</button><button data-msg-range="${id}" title="이전·이후 삭제">✂</button><button data-msg-delete="${id}" title="삭제">×</button></div></div>`};
+
+let v38DraggedMessageId='';
+function clearV38DragMarks(){
+  $$('.chat-row.dragging,.chat-row.drag-before,.chat-row.drag-after').forEach(row=>row.classList.remove('dragging','drag-before','drag-after'));
+}
+function moveMessageToV38(id,targetId,after=false){
+  if(!id||!targetId||id===targetId)return false;
+  const from=state.messages.findIndex(m=>m.id===id);if(from<0)return false;
+  const [item]=state.messages.splice(from,1);
+  let target=state.messages.findIndex(m=>m.id===targetId);
+  if(target<0){state.messages.splice(from,0,item);return false}
+  if(after)target+=1;
+  state.messages.splice(target,0,item);
+  renderAll(false);
+  requestAnimationFrame(()=>{
+    const row=$(`.chat-row[data-message-id="${CSS.escape(id)}"]`);
+    row?.classList.add('row-action-active');
+    row?.scrollIntoView({block:'nearest'});
+  });
+  return true;
+}
+
+// Arrow movement remains as a precise fallback, but the menu stays open so it can be clicked repeatedly.
+moveMessage=function(id,dir){
+  const i=state.messages.findIndex(m=>m.id===id),j=i+dir;if(i<0||j<0||j>=state.messages.length)return;
+  [state.messages[i],state.messages[j]]=[state.messages[j],state.messages[i]];
+  renderAll(false);
+  requestAnimationFrame(()=>{
+    const row=$(`.chat-row[data-message-id="${CSS.escape(id)}"]`),tools=row?.querySelector('.row-tools');
+    row?.classList.add('row-action-active');tools?.classList.add('open');
+    const button=tools?.querySelector(dir<0?'[data-msg-up]':'[data-msg-down]');
+    try{button?.focus({preventScroll:true})}catch{button?.focus()}
+    row?.scrollIntoView({block:'nearest'});
+  });
+};
+
+function setupV38RowInteractions(){
+  const list=$('#chatList');if(!list)return;
+  list.addEventListener('pointerover',e=>{
+    if(innerWidth<=900)return;
+    const row=e.target.closest('.chat-row');if(!row||!list.contains(row))return;
+    const openRow=list.querySelector('.row-tools.open')?.closest('.chat-row');
+    if(openRow&&openRow!==row)return;
+    $$('.chat-row.row-action-active').forEach(other=>{if(other!==row)other.classList.remove('row-action-active')});
+    row.classList.add('row-action-active');
+  });
+  list.addEventListener('pointerleave',()=>{
+    if(innerWidth<=900)return;
+    $$('.chat-row.row-action-active').forEach(row=>{if(!row.querySelector('.row-tools.open'))row.classList.remove('row-action-active')});
+  });
+  list.addEventListener('dragstart',e=>{
+    const handle=e.target.closest('[data-msg-drag]');if(!handle||innerWidth<=900){if(handle)e.preventDefault();return}
+    v38DraggedMessageId=handle.dataset.msgDrag||'';const row=handle.closest('.chat-row');
+    row?.classList.add('dragging','row-action-active');
+    e.dataTransfer.effectAllowed='move';
+    try{e.dataTransfer.setData('text/plain',v38DraggedMessageId)}catch{}
+  });
+  list.addEventListener('dragover',e=>{
+    if(!v38DraggedMessageId)return;
+    const row=e.target.closest('.chat-row');if(!row||row.dataset.messageId===v38DraggedMessageId)return;
+    e.preventDefault();e.dataTransfer.dropEffect='move';
+    $$('.chat-row.drag-before,.chat-row.drag-after').forEach(x=>{if(x!==row)x.classList.remove('drag-before','drag-after')});
+    const rect=row.getBoundingClientRect(),after=e.clientY>rect.top+rect.height/2;
+    row.classList.toggle('drag-before',!after);row.classList.toggle('drag-after',after);
+    const scroll=$('#chatScroll'),srect=scroll?.getBoundingClientRect();
+    if(scroll&&srect){if(e.clientY<srect.top+54)scroll.scrollTop-=24;else if(e.clientY>srect.bottom-54)scroll.scrollTop+=24}
+  });
+  list.addEventListener('drop',e=>{
+    if(!v38DraggedMessageId)return;
+    const row=e.target.closest('.chat-row');if(!row)return;
+    e.preventDefault();const rect=row.getBoundingClientRect(),after=e.clientY>rect.top+rect.height/2,targetId=row.dataset.messageId;
+    const moved=moveMessageToV38(v38DraggedMessageId,targetId,after);
+    clearV38DragMarks();v38DraggedMessageId='';if(moved)toast('메시지 위치를 옮겼습니다.');
+  });
+  list.addEventListener('dragend',()=>{clearV38DragMarks();v38DraggedMessageId=''});
+  document.addEventListener('click',e=>{
+    if(innerWidth<=900)return;
+    if(e.target.closest('.row-tools'))return;
+    $$('.row-tools.open').forEach(x=>x.classList.remove('open'));
+    $$('.chat-row.row-action-active').forEach(x=>x.classList.remove('row-action-active'));
+  });
+}
+function injectV38Styles(){
+  if(document.getElementById('v38-style'))return;
+  const style=document.createElement('style');style.id='v38-style';style.textContent=`
+@media(min-width:901px){
+  .chat-row:hover .row-tools{opacity:0!important;pointer-events:none!important;transform:translateY(2px)!important}
+  .chat-row.row-action-active .row-tools,.chat-row:focus-within .row-tools,.chat-row.dragging .row-tools{opacity:1!important;pointer-events:auto!important;transform:none!important}
+  .row-tools{top:0!important;padding:2px!important;border-radius:9px!important;gap:2px!important}
+  .row-tools button{height:24px!important;width:25px!important;border-radius:7px!important}
+  .row-tools .row-direct-edit{height:24px!important;min-width:42px!important;padding:0 8px!important}
+  .row-direct-actions{gap:2px!important}
+  .row-drag-handle{cursor:grab!important;font-size:15px!important;line-height:1!important;touch-action:none;color:var(--muted)!important}
+  .row-drag-handle:active{cursor:grabbing!important}
+  .row-menu-actions{top:0!important;right:calc(100% + 4px)!important}
+}
+.chat-row.dragging{opacity:.38}
+.chat-row.drag-before:before,.chat-row.drag-after:after{content:"";position:absolute;left:0;right:0;height:2px;background:var(--accent);border-radius:2px;z-index:8;pointer-events:none}
+.chat-row.drag-before:before{top:-4px}.chat-row.drag-after:after{bottom:-4px}
+@media(max-width:900px){.row-drag-handle{display:none!important}}
+`;
+  document.head.append(style);
+}
+function setupV38Controls(){injectV38Styles();setupV38RowInteractions()}
+
+
+/* ==== v39 drag-only message reordering ==== */
+rowTools=function(id){return `<div class="row-tools"><div class="row-direct-actions"><button class="row-drag-handle" data-msg-drag="${id}" draggable="true" title="끌어서 이동" aria-label="끌어서 이동">⠿</button><button class="row-direct-add" data-msg-add="${id}" title="아래에 추가">＋</button><button class="row-direct-edit" data-msg-edit="${id}" title="수정">수정</button></div><button class="row-menu-toggle" data-msg-menu="${id}" title="더 보기">⋯</button><div class="row-menu-actions"><button class="row-mobile-primary" data-msg-add="${id}" title="아래에 추가">＋</button><button class="row-mobile-primary" data-msg-edit="${id}" title="수정">✎</button><button data-msg-range="${id}" title="이전·이후 삭제">✂</button><button data-msg-delete="${id}" title="삭제">×</button></div></div>`};
+function setupV39Controls(){}
+
+
+/* ==== v40 distinguish add vs edit inline editor ==== */
+DEFAULT_STATE.version=40;
+renderInlineEditor=function(){
+  if(!inlineEditor.mode)return '';
+  const isEdit=inlineEditor.mode==='edit';
+  const type=inlineEditor.type||'say',speakerMode=usesSpeaker(type),actionMode=isActionType(type),category=speakerMode?'dialogue':'narration';
+  const categoryButtons=`<div class="inline-type-grid inline-category-grid"><button type="button" class="inline-type-btn ${category==='dialogue'?'active':''}" data-inline-category="dialogue">대화</button><button type="button" class="inline-type-btn ${category==='narration'?'active':''}" data-inline-category="narration">나레이션</button></div>`;
+  const speakerTypes=sortedTypes(new Set(['say','shout','yell','party','alliance','free','tell-from','tell-to','emote-custom',...state.messages.filter(m=>usesSpeaker(m.type)).map(m=>m.type)]))
+    .filter(t=>usesSpeaker(t)).map(t=>`<option value="${escapeHTML(t)}" ${t===type?'selected':''}>${escapeHTML(typeLabel(t))}</option>`).join('');
+  const memberOptions=state.members.map(m=>`<option value="${escapeHTML(m.id)}" ${m.id===inlineEditor.memberId?'selected':''}>${escapeHTML(m.name)}</option>`).join('');
+  const speakerFields=speakerMode?`<div class="field-row"><div class="field"><span class="label">화자</span><div class="inline-speaker-picker"><select class="select" id="inlineMember">${memberOptions||'<option value="">기존 화자 없음</option>'}</select><span class="inline-or">또는</span><input class="input" id="inlineNewMember" value="${escapeHTML(inlineEditor.newMemberName||'')}" placeholder="새 화자 이름"></div></div><div class="field"><span class="label">유형</span><select class="select" id="inlineSpeakerType">${speakerTypes}</select></div></div>`:'';
+  const narrationFields=!speakerMode?`<div class="field"><span class="label">형식</span><select class="select" id="inlineNarrationType"><option value="narration" ${type==='narration'?'selected':''}>나레이션</option><option value="location" ${type==='location'?'selected':''}>장소</option><option value="time-note" ${type==='time-note'?'selected':''}>시간</option><option value="divider" ${type==='divider'?'selected':''}>가로선</option></select></div>`:'';
+  const contentField=type==='divider'?`<div class="divider-insert-preview" aria-label="긴 가로선 미리보기"><span></span></div>`:`<div class="field"><span class="label">내용</span><textarea class="textarea" id="inlineContent" placeholder="${escapeHTML(manualTypePlaceholder(type))}">${escapeHTML(inlineEditor.content||'')}</textarea></div>`;
+  const linkOpen=Boolean(inlineEditor.imageLinkOpen),hasImage=Boolean(inlineEditor.image);
+  const imageStatus=hasImage?(String(inlineEditor.image).startsWith('http')?'링크 첨부됨':'첨부됨'):'없음';
+  const imageField=speakerMode&&!actionMode?`<div class="field"><span class="label">이미지 첨부 (선택)</span><div class="inline-image-actions"><button class="soft-btn" id="inlineImageBtn" type="button">파일</button><button class="soft-btn" id="inlineImageLinkBtn" type="button">링크</button><span class="badge" id="inlineImageName">${imageStatus}</span><button class="tiny-btn ${hasImage?'':'hidden'}" id="inlineImageRemove" type="button">×</button><input class="hidden" type="file" id="inlineImage" accept="image/*"></div><div class="inline-link-row ${linkOpen?'':'hidden'}" id="inlineImageLinkRow"><input class="input" id="inlineImageLinkInput" value="${escapeHTML(inlineEditor.imageLinkValue||'')}" placeholder="https://example.com/image.png"><button class="soft-btn" id="inlineImageLinkApply" type="button">등록</button></div></div>`:'';
+  const modeTitle=isEdit?'항목 수정':(inlineEditor.anchorId?'아래에 새 항목 추가':'새 항목 추가');
+  const modeIcon=isEdit?'✎':'＋';
+  return `<div class="inline-editor-wrap mode-${isEdit?'edit':'add'}" data-inline-wrap data-inline-mode="${isEdit?'edit':'add'}"><div class="inline-mode-rail" aria-hidden="true"></div><div class="inline-editor"><div class="inline-mode-head"><span class="inline-mode-icon" aria-hidden="true">${modeIcon}</span><strong>${modeTitle}</strong></div>${categoryButtons}${speakerFields}${narrationFields}${contentField}${imageField}<div class="form-actions"><button class="primary-btn ${isEdit?'edit-save-btn':''}" id="inlineSave" type="button">${isEdit?'변경 저장':'추가'}</button><button class="soft-btn" id="inlineCancel" type="button">취소</button></div></div></div>`;
+};
+
+const v39RenderMessagesV40=renderMessages;
+renderMessages=function(resetLimit=false){
+  v39RenderMessagesV40(resetLimit);
+  const list=$('#chatList');if(!list)return;
+  list.querySelectorAll('.chat-row.inline-edit-target,.chat-row.inline-add-anchor').forEach(row=>row.classList.remove('inline-edit-target','inline-add-anchor'));
+  if(inlineEditor.mode&&inlineEditor.anchorId){
+    const row=list.querySelector(`.chat-row[data-message-id="${CSS.escape(inlineEditor.anchorId)}"]`);
+    if(row)row.classList.add(inlineEditor.mode==='edit'?'inline-edit-target':'inline-add-anchor');
+  }
+};
+
+function injectV40Styles(){
+  if(document.getElementById('v40-style'))return;
+  const style=document.createElement('style');style.id='v40-style';style.textContent=`
+.inline-editor-wrap{position:relative}
+.inline-editor-wrap .inline-mode-rail{width:var(--chat-avatar-size);min-height:1px}
+.inline-editor-wrap .inline-editor{position:relative;overflow:hidden;padding-top:0!important}
+.inline-mode-head{display:flex;align-items:center;gap:8px;margin:0 -14px 2px;padding:10px 13px;font-size:12px;font-weight:900;letter-spacing:-.01em;border-bottom:1px solid var(--line)}
+.inline-mode-icon{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:14px;font-weight:900}
+.inline-editor-wrap.mode-add .inline-editor{border-style:dashed!important;border-color:color-mix(in srgb,var(--accent) 55%,var(--line))!important;background:color-mix(in srgb,var(--accent) 3%,var(--panel-2))!important}
+.inline-editor-wrap.mode-add .inline-mode-head{color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
+.inline-editor-wrap.mode-add .inline-mode-icon{background:color-mix(in srgb,var(--accent) 13%,transparent)}
+.inline-editor-wrap.mode-edit{--edit-accent:#b36f2f}
+.inline-editor-wrap.mode-edit .inline-editor{border:2px solid color-mix(in srgb,var(--edit-accent) 62%,var(--line))!important;background:color-mix(in srgb,var(--edit-accent) 3%,var(--panel-2))!important}
+.inline-editor-wrap.mode-edit .inline-mode-head{color:var(--edit-accent);background:color-mix(in srgb,var(--edit-accent) 9%,var(--panel));margin-left:-13px;margin-right:-13px}
+.inline-editor-wrap.mode-edit .inline-mode-icon{background:color-mix(in srgb,var(--edit-accent) 14%,transparent)}
+.inline-editor-wrap.mode-edit .edit-save-btn{background:var(--edit-accent)!important;border-color:var(--edit-accent)!important}
+.chat-row.inline-edit-target{border-radius:12px;outline:2px solid color-mix(in srgb,#b36f2f 46%,transparent);outline-offset:4px;background:color-mix(in srgb,#b36f2f 4%,transparent)}
+.chat-row.inline-edit-target .row-tools{opacity:0!important;pointer-events:none!important}
+.chat-row.inline-add-anchor:after{content:"";position:absolute;left:calc(var(--chat-avatar-size) + 12px);right:0;bottom:-6px;height:1px;background:color-mix(in srgb,var(--accent) 48%,var(--line));pointer-events:none}
+@media(max-width:900px){.inline-editor-wrap .inline-mode-rail{display:none}.chat-row.inline-add-anchor:after{left:0}.inline-mode-head{margin-left:-14px!important;margin-right:-14px!important}}
+`;
+  document.head.append(style);
+}
+function setupV40Controls(){injectV40Styles();renderMessages(false)}
 function setupV33Controls(){
   // No extra panel: sourceName is an internal stable key. Keep the editor visually unchanged.
 }
@@ -3409,12 +3687,12 @@ async function init(){
   bindEvents();setupV5Controls();setupV8ImageHandling();setupOutgoingTellSetting();
   const saved=await dbGet();let oldVersion=0;
   if(saved&&saved.settings&&Array.isArray(saved.members)&&Array.isArray(saved.messages)){oldVersion=Number(saved.version||0);state={...structuredClone(DEFAULT_STATE),...saved,settings:{...DEFAULT_STATE.settings,...saved.settings},speakerProfiles:{...(saved.speakerProfiles||{})},archivedMembers:{...(saved.archivedMembers||{})}};if(oldVersion<5&&state.settings.fontPreset==='system')state.settings.fontPreset='pretendard'}
-  ensureSettings();ensureCompactState();if(oldVersion<33)migrateWorldSpeakerIdentities();cleanupSpeakerMemoryArtifacts();migrateStableSpeakerIdentities();state.version=36;cleanStoredEmotes();seedSpeakerProfiles();
+  ensureSettings();ensureCompactState();if(oldVersion<33)migrateWorldSpeakerIdentities();cleanupSpeakerMemoryArtifacts();migrateStableSpeakerIdentities();state.version=40;cleanStoredEmotes();seedSpeakerProfiles();
   if(oldVersion&&oldVersion<8){const count=await optimizeStoredImages();if(count)toast(`기존 이미지 ${count.toLocaleString('ko-KR')}개를 128px 기준으로 최적화했습니다.`)}
   viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));renderAll(true);syncMobileTabs();updateAvatarPreview();
 }
 
-init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();setupV27Controls();setupV30Controls();setupV31Controls();setupV33Controls();setupV34Controls();setupV35Controls();setupV36Controls();updateMinimalCopy();});
+init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();setupV27Controls();setupV30Controls();setupV31Controls();setupV33Controls();setupV34Controls();setupV35Controls();setupV36Controls();setupV37Controls();setupV38Controls();setupV39Controls();setupV40Controls();updateMinimalCopy();});
 })();
 </script>
 </body>
