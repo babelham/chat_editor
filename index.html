@@ -158,6 +158,18 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .member-head-actions .badge{flex:0 0 auto}
 @media(max-width:520px){.member-card-head{flex-wrap:wrap}.member-head-actions{margin-left:auto}}
 </style>
+
+<script type="importmap" id="v57-paddle-importmap">
+{
+  "imports": {
+    "onnxruntime-web": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist/ort.all.bundle.min.mjs",
+    "onnxruntime-common": "https://cdn.jsdelivr.net/npm/onnxruntime-common@1.23.2/dist/ort-common.min.mjs",
+    "ppu-ocv/web": "https://cdn.jsdelivr.net/npm/ppu-ocv@4.0.0/index.web.js",
+    "ppu-ocv/canvas": "https://cdn.jsdelivr.net/npm/ppu-ocv@4.0.0/index.canvas-web.js",
+    "ppu-ocv/canvas-web": "https://cdn.jsdelivr.net/npm/ppu-ocv@4.0.0/index.canvas-web.js"
+  }
+}
+</script>
 </head>
 <body>
 <div class="app">
@@ -185,7 +197,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <main class="workspace" id="workspace" data-mobile-view="editor">
   <section class="editor-pane">
     <article class="card">
-      <div class="card-head"><div><div class="card-title">로그 일괄 가져오기</div><div class="card-desc"></div></div></div>
+      <div class="card-head"><div><div class="card-title">대화 등록</div><div class="card-desc"></div></div></div>
       <div class="card-body">
         <div class="dropzone" id="dropzone"><strong>파일을 놓거나 클릭해 선택</strong><p>.html · .log · .txt</p><button class="soft-btn" type="button">파일 선택</button><input type="file" id="logFile" accept=".html,.htm,.log,.txt,text/html,text/plain"></div>
         <div class="import-filter-head">
@@ -430,7 +442,7 @@ function selectedImportTypes(){return new Set($$('[data-import-type]:checked').m
 function renderParseResult(){const box=$('#parseResult');if(!pendingImport){box.classList.add('hidden');return}const types=selectedImportTypes(),msgs=pendingImport.messages.filter(m=>types.has(m.type)),names=new Set(msgs.map(m=>m.memberName)),allTypes=sortedTypes(Object.keys(pendingImport.typeCounts));box.classList.remove('hidden');box.innerHTML=`<div class="result-top"><div><div class="result-title">${escapeHTML(pendingImport.fileName)}</div><div class="result-meta">감지 유형 ${allTypes.length.toLocaleString('ko-KR')}개 · 화자 ${names.size.toLocaleString('ko-KR')}명 · 등록 대상 ${msgs.length.toLocaleString('ko-KR')}개 / 전체 ${pendingImport.messages.length.toLocaleString('ko-KR')}개</div></div><button class="primary-btn" id="commitImport" ${msgs.length?'':'disabled'}>일괄 등록</button></div><div class="type-chips">${allTypes.map(k=>`<span class="type-chip ${types.has(k)?'':'off'}">${escapeHTML(typeLabel(k))} ${pendingImport.typeCounts[k].toLocaleString('ko-KR')}</span>`).join('')}</div><div class="sample-list">${msgs.slice(0,4).map(m=>`<div class="sample"><b>${escapeHTML(m.memberName)}</b> <span class="muted">· ${escapeHTML(typeLabel(m.type))}</span> · ${escapeHTML(stripHTML(m.html))}</div>`).join('')}</div>`;$('#commitImport')?.addEventListener('click',commitImport);}
 async function commitImport(){const types=selectedImportTypes(), source=pendingImport.messages.filter(m=>types.has(m.type));if(!source.length)return;lastImportBackup=structuredClone(state);const existingByName=new Map(state.members.map(m=>[m.name,m]));if(importMode==='replace'){state.members=[];state.messages=[];existingByName.clear()}
   const membersToAdd=[...new Set(source.map(m=>m.memberName))];for(const name of membersToAdd){if(!existingByName.has(name)){const sourceM=pendingImport.members.find(m=>m.name===name)||{name,color:hashColor(name),avatar:''};const member={id:uid(),name,color:sourceM.color,avatar:sourceM.avatar||''};state.members.push(member);existingByName.set(name,member)}}
-  setProgress(0,'로그 등록 중',`${source.length.toLocaleString('ko-KR')}개 메시지를 정리하고 있습니다.`);const chunk=500;for(let i=0;i<source.length;i+=chunk){for(const m of source.slice(i,i+chunk)){const member=existingByName.get(m.memberName);state.messages.push({id:uid(),memberId:member.id,senderSnapshot:{name:member.name,color:member.color,avatar:member.avatar},type:m.type,html:m.html,actionText:m.actionText||'',image:'',sourceId:m.sourceId||''})}setProgress(((i+chunk)/source.length)*100,'로그 등록 중',`${Math.min(i+chunk,source.length).toLocaleString('ko-KR')} / ${source.length.toLocaleString('ko-KR')}`);await new Promise(r=>setTimeout(r,0))}endProgress();$('#undoImport').classList.remove('hidden');for(const type of types)viewTypes.add(type);pendingImport=null;renderImportTypeChecks();$('#parseResult').classList.add('hidden');$('#logFile').value='';renderAll(true);toast('로그 일괄 등록을 완료했습니다.');}
+  setProgress(0,'대화 등록 중',`${source.length.toLocaleString('ko-KR')}개 메시지를 정리하고 있습니다.`);const chunk=500;for(let i=0;i<source.length;i+=chunk){for(const m of source.slice(i,i+chunk)){const member=existingByName.get(m.memberName);state.messages.push({id:uid(),memberId:member.id,senderSnapshot:{name:member.name,color:member.color,avatar:member.avatar},type:m.type,html:m.html,actionText:m.actionText||'',image:'',sourceId:m.sourceId||''})}setProgress(((i+chunk)/source.length)*100,'대화 등록 중',`${Math.min(i+chunk,source.length).toLocaleString('ko-KR')} / ${source.length.toLocaleString('ko-KR')}`);await new Promise(r=>setTimeout(r,0))}endProgress();$('#undoImport').classList.remove('hidden');for(const type of types)viewTypes.add(type);pendingImport=null;renderImportTypeChecks();$('#parseResult').classList.add('hidden');$('#logFile').value='';renderAll(true);toast('대화 등록을 완료했습니다.');}
 
 function resetMemberForm(){editingMemberId=null;pendingAvatar='';$('#memberName').value='';$('#memberColor').value='#e95f76';$('#memberColorText').value='#e95f76';$('#memberAvatarPreview').textContent='?';$('#avatarRemoveBtn').classList.add('hidden');$('#saveMember').textContent='+ 화자 추가';$('#cancelMemberEdit').classList.add('hidden');$('#avatarLinkField').style.display='none';$('#avatarLink').value='';}
 function updateAvatarPreview(){const box=$('#memberAvatarPreview'),name=$('#memberName').value;if(pendingAvatar)box.innerHTML=`<img alt="" src="${escapeHTML(pendingAvatar)}">`;else box.textContent=initials(name)}
@@ -636,7 +648,7 @@ async function deleteRange(direction){const i=state.messages.findIndex(m=>m.id==
 
 function renderMessages(resetLimit=false){if(resetLimit)visibleLimit=320;const list=$('#chatList'),filtered=filteredMessages(),shown=filtered.slice(0,visibleLimit);$('#messageCount').textContent=state.messages.length.toLocaleString('ko-KR');updateFilterCounts();list.textContent='';if(!shown.length){const canAdd=state.members.length&&!state.messages.length;list.innerHTML=`<div class="empty-state"><div><div class="empty-icon">💬</div><b>${state.messages.length?'조건에 맞는 메시지가 없습니다':'아직 메시지가 없어요'}</b><span>${state.messages.length?'필터나 검색어를 바꿔 보세요':'로그를 불러오거나 직접 첫 메시지를 추가하세요'}</span>${canAdd?'<button class="soft-btn" id="emptyAddBtn" type="button">첫 메시지 추가</button>':''}</div></div>`;if(canAdd)$('#emptyAddBtn').onclick=()=>openInlineEditor('add','');return}const frag=document.createDocumentFragment();for(const msg of shown){const mem=resolveMember(msg),row=document.createElement('div');row.className='chat-row type-'+msg.type;row.dataset.messageId=msg.id;if(msg.type==='emote'||msg.type==='emote-custom'){row.innerHTML=`<div class="action-row"><b style="color:${safeColor(mem.color)}">${escapeHTML(mem.name)}</b>${actionGap(msg.actionText||stripHTML(msg.html))}${msg.actionText?escapeHTML(msg.actionText):msg.html}</div>${rowTools(msg.id)}`;}else{row.innerHTML=`${avatarHTML(mem)}<div class="chat-main"><div class="chat-name" style="color:${safeColor(mem.color)}">${escapeHTML(mem.name)}</div><div class="bubble">${msg.html}${msg.image?`<img class="attachment" alt="첨부 이미지" src="${escapeHTML(msg.image)}">`:''}</div>${rowTools(msg.id)}</div>`;}frag.append(row);if(inlineEditor.mode&&inlineEditor.anchorId===msg.id){const wrap=document.createElement('div');wrap.innerHTML=renderInlineEditor();frag.append(...wrap.childNodes);}}list.append(frag);if(!inlineEditor.anchorId&&inlineEditor.mode==='add'){const wrap=document.createElement('div');wrap.innerHTML=renderInlineEditor();list.append(...wrap.childNodes);}if(filtered.length>shown.length){const btn=document.createElement('button');btn.className='soft-btn load-more';btn.textContent=`더 불러오기 (${(filtered.length-shown.length).toLocaleString('ko-KR')}개 남음)`;btn.onclick=()=>{visibleLimit+=500;renderMessages(false)};list.append(btn)}if(filtered.length!==state.messages.length){const note=document.createElement('div');note.className='filtered-note';note.textContent=`전체 ${state.messages.length.toLocaleString('ko-KR')}개 중 ${filtered.length.toLocaleString('ko-KR')}개 표시`;list.append(note);}}
 
-async function commitImport(){const types=selectedImportTypes(),source=pendingImport.messages.filter(m=>types.has(m.type));if(!source.length)return;lastImportBackup=structuredClone(state);ensureSettings();const existingByName=new Map(state.members.map(m=>[profileKey(m.name),m]));if(importMode==='replace'){state.members=[];state.messages=[];existingByName.clear()}const names=[...new Set(source.map(m=>m.memberName))];for(const name of names){const key=profileKey(name);if(!existingByName.has(key)){const remembered=rememberedSpeaker(name);const sourceM=pendingImport.members.find(m=>profileKey(m.name)===key)||{name,color:hashColor(name),avatar:''};const member={id:uid(),name,color:remembered?.color||sourceM.color||hashColor(name),avatar:remembered?.avatar||sourceM.avatar||''};state.members.push(member);existingByName.set(key,member);rememberSpeaker(member);}}setProgress(0,'로그 등록 중',`${source.length.toLocaleString('ko-KR')}개 메시지를 정리하고 있습니다.`);const chunk=500;for(let i=0;i<source.length;i+=chunk){for(const m of source.slice(i,i+chunk)){const member=existingByName.get(profileKey(m.memberName));state.messages.push({id:uid(),memberId:member.id,senderSnapshot:{name:member.name,color:member.color,avatar:member.avatar},type:m.type,html:m.html,actionText:m.actionText||'',image:'',sourceId:m.sourceId||''});}setProgress(((i+chunk)/source.length)*100,'로그 등록 중',`${Math.min(i+chunk,source.length).toLocaleString('ko-KR')} / ${source.length.toLocaleString('ko-KR')}`);await new Promise(r=>setTimeout(r,0));}endProgress();viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));$('#viewTypeChecks').dataset.initialized='';$('#viewSpeakerChecks').dataset.initialized='';$('#undoImport').classList.remove('hidden');pendingImport=null;renderImportTypeChecks();$('#parseResult').classList.add('hidden');$('#logFile').value='';renderAll(true);toast('로그 일괄 등록을 완료했습니다.');}
+async function commitImport(){const types=selectedImportTypes(),source=pendingImport.messages.filter(m=>types.has(m.type));if(!source.length)return;lastImportBackup=structuredClone(state);ensureSettings();const existingByName=new Map(state.members.map(m=>[profileKey(m.name),m]));if(importMode==='replace'){state.members=[];state.messages=[];existingByName.clear()}const names=[...new Set(source.map(m=>m.memberName))];for(const name of names){const key=profileKey(name);if(!existingByName.has(key)){const remembered=rememberedSpeaker(name);const sourceM=pendingImport.members.find(m=>profileKey(m.name)===key)||{name,color:hashColor(name),avatar:''};const member={id:uid(),name,color:remembered?.color||sourceM.color||hashColor(name),avatar:remembered?.avatar||sourceM.avatar||''};state.members.push(member);existingByName.set(key,member);rememberSpeaker(member);}}setProgress(0,'대화 등록 중',`${source.length.toLocaleString('ko-KR')}개 메시지를 정리하고 있습니다.`);const chunk=500;for(let i=0;i<source.length;i+=chunk){for(const m of source.slice(i,i+chunk)){const member=existingByName.get(profileKey(m.memberName));state.messages.push({id:uid(),memberId:member.id,senderSnapshot:{name:member.name,color:member.color,avatar:member.avatar},type:m.type,html:m.html,actionText:m.actionText||'',image:'',sourceId:m.sourceId||''});}setProgress(((i+chunk)/source.length)*100,'대화 등록 중',`${Math.min(i+chunk,source.length).toLocaleString('ko-KR')} / ${source.length.toLocaleString('ko-KR')}`);await new Promise(r=>setTimeout(r,0));}endProgress();viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));$('#viewTypeChecks').dataset.initialized='';$('#viewSpeakerChecks').dataset.initialized='';$('#undoImport').classList.remove('hidden');pendingImport=null;renderImportTypeChecks();$('#parseResult').classList.add('hidden');$('#logFile').value='';renderAll(true);toast('대화 등록을 완료했습니다.');}
 function renderAll(reset=true){ensureSettings();seedSpeakerProfiles();applySettings();renderMembers();syncViewTypeChecks();syncViewSpeakerChecks($('#speakerFilterSearch')?.value||'');renderMessages(reset);scheduleSave();}
 function exportStyles(){ensureSettings();const font=FONT_PRESETS[state.settings.fontPreset];const bg=safeHexInput(state.settings.bgColor,'#f6f7fa'),paper=safeHexInput(state.settings.paperColor,'#ffffff'),text=safeHexInput(state.settings.textColor,'#2b313d'),avatar=Number(state.settings.avatarSize||42),lineHeight=String(state.settings.lineHeight||1.65),fontSize=Number(state.settings.fontSize||16),radius=state.settings.avatarShape==='rounded'?'13px':'50%';return `:root{--bg:${bg};--paper:${paper};--text:${text};--muted:#707785;--line:#e3e7ef;--accent:#5a7fff;--avatar-radius:${radius};--chat-font:${fontSize}px;--chat-avatar-size:${avatar}px;--chat-line-height:${lineHeight};--chat-font-family:${font}}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}main{width:min(920px,100%);min-height:100vh;margin:auto;background:var(--paper);padding:42px clamp(16px,4vw,42px)}header{padding:8px 4px 25px;border-bottom:1px solid var(--line);margin-bottom:25px}header span{color:var(--accent);font-size:11px;font-weight:900;letter-spacing:.14em}h1{font-size:30px;letter-spacing:-.05em;margin:6px 0}header p{color:var(--muted);font-size:12px;margin:0}#chat{display:flex;flex-direction:column;gap:15px}.row{display:grid;grid-template-columns:var(--chat-avatar-size) minmax(0,1fr);gap:12px;align-items:flex-start}.avatar{width:var(--chat-avatar-size);height:var(--chat-avatar-size);border-radius:var(--avatar-radius);display:grid;place-items:center;overflow:hidden;background:transparent;color:var(--muted)}.avatar img{width:100%;height:100%;object-fit:contain;background:transparent}.avatar-silhouette{width:72%;height:72%;opacity:.42}.name,.bubble,.action{font-family:var(--chat-font-family)}.name{font-size:14px;font-weight:850;margin:0 0 2px}.bubble{display:block;padding:0;background:transparent;border:0;box-shadow:none;line-height:var(--chat-line-height);font-size:var(--chat-font);word-break:break-word}.muted{opacity:.65}.action{padding-left:calc(var(--chat-avatar-size) + 12px);color:var(--muted);font-size:13px;line-height:1.6;font-style:italic}.action b{font-style:normal}.attachment{max-width:100%;display:block;border-radius:12px;margin-top:8px}@media(max-width:520px){main{padding-top:28px}.row{gap:10px}h1{font-size:24px}}`;}
 function bindEvents(){
@@ -832,10 +844,10 @@ async function commitImport(){
   if(importMode==='replace'){state.members=[];state.messages=[];state.archivedMembers={};existingByName.clear()}
   const names=[...new Set(source.map(m=>m.memberName))];
   for(const name of names){const key=profileKey(name);if(!existingByName.has(key)){const remembered=rememberedSpeaker(name);const sourceM=pendingImport.members.find(m=>profileKey(m.name)===key)||{name,color:hashColor(name),avatar:''};const member={id:uid(),name,color:remembered?.color||sourceM.color||hashColor(name),avatar:remembered?.avatar||sourceM.avatar||''};state.members.push(member);existingByName.set(key,member);rememberSpeaker(member)}}
-  setProgress(0,'로그 등록 중',`${source.length.toLocaleString('ko-KR')}개 메시지를 정리하고 있습니다.`);
+  setProgress(0,'대화 등록 중',`${source.length.toLocaleString('ko-KR')}개 메시지를 정리하고 있습니다.`);
   const chunk=500;
-  for(let i=0;i<source.length;i+=chunk){for(const m of source.slice(i,i+chunk)){const member=existingByName.get(profileKey(m.memberName));state.messages.push({id:uid(),memberId:member.id,type:m.type,html:m.html,actionText:m.actionText||'',image:'',sourceId:m.sourceId||''})}setProgress(((i+chunk)/source.length)*100,'로그 등록 중',`${Math.min(i+chunk,source.length).toLocaleString('ko-KR')} / ${source.length.toLocaleString('ko-KR')}`);await new Promise(r=>setTimeout(r,0))}
-  endProgress();viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));$('#viewTypeChecks').dataset.initialized='';$('#viewSpeakerChecks').dataset.initialized='';$('#undoImport').classList.remove('hidden');pendingImport=null;renderImportTypeChecks();$('#parseResult').classList.add('hidden');$('#logFile').value='';renderAll(true);toast('로그 일괄 등록을 완료했습니다.');
+  for(let i=0;i<source.length;i+=chunk){for(const m of source.slice(i,i+chunk)){const member=existingByName.get(profileKey(m.memberName));state.messages.push({id:uid(),memberId:member.id,type:m.type,html:m.html,actionText:m.actionText||'',image:'',sourceId:m.sourceId||''})}setProgress(((i+chunk)/source.length)*100,'대화 등록 중',`${Math.min(i+chunk,source.length).toLocaleString('ko-KR')} / ${source.length.toLocaleString('ko-KR')}`);await new Promise(r=>setTimeout(r,0))}
+  endProgress();viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));$('#viewTypeChecks').dataset.initialized='';$('#viewSpeakerChecks').dataset.initialized='';$('#undoImport').classList.remove('hidden');pendingImport=null;renderImportTypeChecks();$('#parseResult').classList.add('hidden');$('#logFile').value='';renderAll(true);toast('대화 등록을 완료했습니다.');
 }
 async function saveMessage(){
   const memberId=inlineEditor.memberId||(state.members[0]?.id||''),content=inlineEditor.content||'';
@@ -1481,16 +1493,16 @@ async function commitImport(){
   if(importMode==='replace'){state.members=[];state.messages=[];state.archivedMembers={};existingByName.clear()}
   const names=[...new Set(source.map(m=>m.memberName))];
   for(const name of names){const key=profileKey(name);if(!existingByName.has(key)){const remembered=rememberedSpeaker(name);const sourceM=pendingImport.members.find(m=>profileKey(m.name)===key)||{name,color:hashColor(name),avatar:''};const member={id:uid(),name,color:remembered?.color||sourceM.color||hashColor(name),avatar:remembered?.avatar||sourceM.avatar||''};state.members.push(member);existingByName.set(key,member);rememberSpeaker(member)}}
-  setProgress(0,'로그 등록 중',`${source.length.toLocaleString('ko-KR')}개 메시지를 정리하고 있습니다.`);
+  setProgress(0,'대화 등록 중',`${source.length.toLocaleString('ko-KR')}개 메시지를 정리하고 있습니다.`);
   const chunk=500;
   for(let i=0;i<source.length;i+=chunk){
     for(const m of source.slice(i,i+chunk)){
       const member=existingByName.get(profileKey(m.memberName));
       state.messages.push({id:uid(),memberId:member.id,type:m.type,html:m.html,actionText:m.actionText||'',image:'',sourceId:m.sourceId||'',tellPeer:m.tellPeer||''});
     }
-    setProgress(((i+chunk)/source.length)*100,'로그 등록 중',`${Math.min(i+chunk,source.length).toLocaleString('ko-KR')} / ${source.length.toLocaleString('ko-KR')}`);await new Promise(r=>setTimeout(r,0));
+    setProgress(((i+chunk)/source.length)*100,'대화 등록 중',`${Math.min(i+chunk,source.length).toLocaleString('ko-KR')} / ${source.length.toLocaleString('ko-KR')}`);await new Promise(r=>setTimeout(r,0));
   }
-  endProgress();viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));$('#viewTypeChecks').dataset.initialized='';$('#viewSpeakerChecks').dataset.initialized='';$('#undoImport').classList.remove('hidden');pendingImport=null;renderImportTypeChecks();$('#parseResult').classList.add('hidden');$('#logFile').value='';renderAll(true);toast('로그 일괄 등록을 완료했습니다.');
+  endProgress();viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));$('#viewTypeChecks').dataset.initialized='';$('#viewSpeakerChecks').dataset.initialized='';$('#undoImport').classList.remove('hidden');pendingImport=null;renderImportTypeChecks();$('#parseResult').classList.add('hidden');$('#logFile').value='';renderAll(true);toast('대화 등록을 완료했습니다.');
 }
 
 const renderAllBeforeV13=renderAll;
@@ -1854,7 +1866,7 @@ function injectV15Styles(){
 }
 function updateMinimalCopy(){
   injectV15Styles();
-  const importCard=document.querySelector('.card .card-title')?.textContent==='로그 일괄 가져오기'?document.querySelector('.card .card-title').closest('.card-head'):null;
+  const importCard=document.querySelector('.card .card-title')?.textContent==='대화 등록'?document.querySelector('.card .card-title').closest('.card-head'):null;
   const desc=importCard?.querySelector('.card-desc'); if(desc)desc.textContent='';
   const drop= document.querySelector('#dropzone p'); if(drop)drop.textContent='.html · .log · .txt';
   const note=$('#tellSenderNote'); if(note)note.textContent='';
@@ -3203,15 +3215,15 @@ async function commitImport(){
     const member={id:uid(),sourceName,name:remembered?.name||sourceName,color:remembered?.color||sourceM.color||hashColor(sourceName),avatar:remembered?.avatar||sourceM.avatar||''};
     state.members.push(member);existingBySource.set(key,member);rememberSpeaker(member);
   }
-  setProgress(0,'로그 등록 중',`${source.length.toLocaleString('ko-KR')}개 메시지를 정리하고 있습니다.`);const chunk=500;
+  setProgress(0,'대화 등록 중',`${source.length.toLocaleString('ko-KR')}개 메시지를 정리하고 있습니다.`);const chunk=500;
   for(let i=0;i<source.length;i+=chunk){
     for(const raw of source.slice(i,i+chunk)){
       const sourceName=normalizeRegularName(raw.memberName),member=existingBySource.get(sourceProfileKey(sourceName));if(!member)continue;
       state.messages.push({id:uid(),memberId:member.id,type:raw.type,html:raw.html,actionText:raw.actionText||'',image:'',sourceId:raw.sourceId||'',tellPeer:raw.tellPeer||''});
     }
-    setProgress(((i+chunk)/source.length)*100,'로그 등록 중',`${Math.min(i+chunk,source.length).toLocaleString('ko-KR')} / ${source.length.toLocaleString('ko-KR')}`);await new Promise(r=>setTimeout(r,0));
+    setProgress(((i+chunk)/source.length)*100,'대화 등록 중',`${Math.min(i+chunk,source.length).toLocaleString('ko-KR')} / ${source.length.toLocaleString('ko-KR')}`);await new Promise(r=>setTimeout(r,0));
   }
-  endProgress();viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));$('#viewTypeChecks').dataset.initialized='';$('#viewSpeakerChecks').dataset.initialized='';$('#undoImport').classList.remove('hidden');pendingImport=null;renderImportTypeChecks();$('#parseResult').classList.add('hidden');$('#logFile').value='';renderAll(true);toast('로그 일괄 등록을 완료했습니다.');
+  endProgress();viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));$('#viewTypeChecks').dataset.initialized='';$('#viewSpeakerChecks').dataset.initialized='';$('#undoImport').classList.remove('hidden');pendingImport=null;renderImportTypeChecks();$('#parseResult').classList.add('hidden');$('#logFile').value='';renderAll(true);toast('대화 등록을 완료했습니다.');
 }
 
 function collectSpeakerLibrary(){
@@ -3679,20 +3691,2705 @@ function injectV40Styles(){
   document.head.append(style);
 }
 function setupV40Controls(){injectV40Styles();renderMessages(false)}
+
+
+/* ==== v41 unified conversation registration + lazy screenshot OCR ==== */
+DEFAULT_STATE.version=41;
+let ocrScriptPromiseV41=null;
+let ocrWorkerPromiseV41=null;
+let ocrReviewV41=null;
+
+function isOcrImageFileV41(file){
+  if(!file)return false;
+  return /^image\//i.test(file.type||'')||/\.(?:png|jpe?g|webp|bmp)$/i.test(file.name||'');
+}
+function ensureOcrReviewPanelV41(){
+  let panel=$('#ocrReviewPanel');
+  if(panel)return panel;
+  panel=document.createElement('div');panel.id='ocrReviewPanel';panel.className='ocr-review-panel hidden';
+  $('#dropzone')?.insertAdjacentElement('afterend',panel);
+  return panel;
+}
+function ocrLineCountV41(text){return String(text||'').split(/\r?\n/).filter(line=>line.trim()).length}
+function normalizeOcrTextV41(text){
+  return String(text||'')
+    .replace(/\r\n?/g,'\n')
+    .replace(/[＜〈《]/g,'<').replace(/[＞〉》]/g,'>')
+    .replace(/[［【]/g,'[').replace(/[］】]/g,']')
+    .split('\n')
+    .map(line=>line.replace(/\u00a0/g,' ').replace(/[\t ]+/g,' ').trim())
+    .map(line=>line
+      .replace(/\[\s*(\d{1,2})\s*:\s*(\d{2})\s*\]/g,'[$1:$2]')
+      .replace(/\[\s*((?:서초링|서버\s*초월\s*링크셸|링크셸|파티|연합|자유부대|초보자|말하기|떠들기|외치기|귓속말)[^\]]*?)\s*\]/gi,(_,body)=>`[${body.replace(/\s+/g,' ').trim()}]`)
+      .replace(/<\s+/g,'<').replace(/\s+>/g,'>'))
+    .filter(Boolean).join('\n');
+}
+function markOcrParsedLogV41(parsed,fileName){
+  if(!parsed)return parsed;
+  const inner=String(parsed.sourceFormat||'').replace(/^스크린샷 OCR\s*·?\s*/,'').trim();
+  parsed.fileName=fileName||parsed.fileName||'스크린샷';
+  parsed.sourceFormat=inner?`스크린샷 OCR · ${inner}`:'스크린샷 OCR';
+  parsed.ocrSource=true;
+  return parsed;
+}
+function parseOcrTextV41(text,fileName){
+  const normalized=normalizeOcrTextV41(text);
+  return {normalized,parsed:markOcrParsedLogV41(parseLogHTML(normalized,fileName),fileName)};
+}
+function renderOcrReviewV41(){
+  const panel=ensureOcrReviewPanelV41();if(!panel)return;
+  if(!ocrReviewV41){panel.classList.add('hidden');panel.textContent='';return}
+  const confidence=Number(ocrReviewV41.confidence||0);
+  const confidenceText=Number.isFinite(confidence)&&confidence>0?` · ${Math.round(confidence)}%`:'';
+  const lines=ocrLineCountV41(ocrReviewV41.text);
+  panel.classList.remove('hidden');
+  panel.innerHTML=`<div class="ocr-review-head"><div><b>텍스트 인식 결과</b><span>${lines.toLocaleString('ko-KR')}줄${confidenceText}</span></div><button class="tiny-btn" id="ocrReviewToggle" type="button">${ocrReviewV41.expanded?'접기':'수정'}</button></div>${ocrReviewV41.expanded?`<textarea class="textarea ocr-review-text" id="ocrReviewText" spellcheck="false">${escapeHTML(ocrReviewV41.text)}</textarea><div class="form-actions ocr-review-actions"><button class="primary-btn" id="ocrReviewApply" type="button">수정 내용 적용</button></div>`:''}`;
+}
+function setOcrProgressV41(message){
+  const status=String(message?.status||'');const progress=Math.max(0,Math.min(1,Number(message?.progress||0)));
+  let pct=Math.round(progress*100);
+  if(status.includes('loading')&&pct<8)pct=8;
+  const label=status.includes('recognizing')?'이미지에서 대화를 읽는 중':'OCR 준비 중';
+  setProgress(pct,label,pct?`${pct}%`:'처음 사용할 때는 잠시 걸릴 수 있습니다.');
+}
+function loadTesseractV41(){
+  if(window.Tesseract?.createWorker)return Promise.resolve(window.Tesseract);
+  if(ocrScriptPromiseV41)return ocrScriptPromiseV41;
+  ocrScriptPromiseV41=new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    script.async=true;
+    script.onload=()=>window.Tesseract?.createWorker?resolve(window.Tesseract):reject(new Error('OCR 모듈 초기화 실패'));
+    script.onerror=()=>reject(new Error('OCR 모듈 다운로드 실패'));
+    document.head.append(script);
+  });
+  return ocrScriptPromiseV41;
+}
+async function getOcrWorkerV41(){
+  if(ocrWorkerPromiseV41)return ocrWorkerPromiseV41;
+  ocrWorkerPromiseV41=(async()=>{
+    const T=await loadTesseractV41();
+    return await T.createWorker('kor+eng',1,{logger:setOcrProgressV41});
+  })().catch(error=>{ocrWorkerPromiseV41=null;throw error});
+  return ocrWorkerPromiseV41;
+}
+async function prepareOcrImageV41(file){
+  let bitmap=null;
+  try{if('createImageBitmap' in window)bitmap=await createImageBitmap(file)}catch{}
+  if(!bitmap)return await fileToDataURL(file);
+  const w=bitmap.width||1,h=bitmap.height||1;
+  const scale=Math.min(3,Math.max(1,w<1400?1400/w:1));
+  const targetW=Math.min(2800,Math.max(w,Math.round(w*scale))),targetH=Math.round(h*(targetW/w));
+  const canvas=document.createElement('canvas');canvas.width=targetW;canvas.height=targetH;
+  const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(bitmap,0,0,targetW,targetH);
+  try{bitmap.close?.()}catch{}
+  return canvas.toDataURL('image/png');
+}
+async function recognizeScreenshotV41(file){
+  pendingImport=null;ocrReviewV41=null;renderImportTypeChecks();renderParseResult();renderOcrReviewV41();
+  setProgress(2,'OCR 준비 중','이미지 인식 기능을 불러오고 있습니다.');
+  try{
+    const [worker,image]=await Promise.all([getOcrWorkerV41(),prepareOcrImageV41(file)]);
+    const result=await worker.recognize(image);
+    const raw=String(result?.data?.text||'');
+    const {normalized,parsed}=parseOcrTextV41(raw,file.name||'스크린샷');
+    pendingImport=parsed;
+    const confidence=Number(result?.data?.confidence||0);
+    ocrReviewV41={fileName:file.name||'스크린샷',text:normalized,confidence,expanded:!parsed.messages?.length||confidence<55};
+    renderImportTypeChecks();renderParseResult();renderOcrReviewV41();
+    const count=parsed.messages?.length||0;
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 이미지에서 찾았습니다.`);
+    else toast('대화를 자동으로 구분하지 못했습니다. 인식 결과를 수정해 주세요.','warn',4200);
+  }catch(error){
+    console.error(error);pendingImport=null;renderImportTypeChecks();renderParseResult();
+    toast('스크린샷 OCR을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.','error',5200);
+  }finally{endProgress();$('#logFile').value=''}
+}
+
+const v40ReadLogFileV41=readLogFile;
+readLogFile=async function(file){
+  if(!file)return;
+  if(isOcrImageFileV41(file))return recognizeScreenshotV41(file);
+  ocrReviewV41=null;renderOcrReviewV41();
+  return v40ReadLogFileV41(file);
+};
+
+const v40RenderParseResultV41=renderParseResult;
+renderParseResult=function(){
+  v40RenderParseResultV41();
+  const commit=$('#commitImport');if(commit)commit.textContent='등록';
+};
+const v40CommitImportV41=commitImport;
+commitImport=async function(){
+  await v40CommitImportV41();
+  if(!pendingImport){ocrReviewV41=null;renderOcrReviewV41()}
+};
+
+function applyEditedOcrTextV41(){
+  if(!ocrReviewV41)return;
+  const input=$('#ocrReviewText');
+  const text=normalizeOcrTextV41(input?.value||ocrReviewV41.text);
+  const {parsed}=parseOcrTextV41(text,ocrReviewV41.fileName);
+  pendingImport=parsed;ocrReviewV41.text=text;ocrReviewV41.expanded=false;
+  renderImportTypeChecks();renderParseResult();renderOcrReviewV41();
+  toast(`${(parsed.messages?.length||0).toLocaleString('ko-KR')}개 메시지로 다시 분석했습니다.`);
+}
+function injectV41Styles(){
+  if(document.getElementById('v41-style'))return;
+  const style=document.createElement('style');style.id='v41-style';style.textContent=`
+.ocr-review-panel{margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:15px;background:color-mix(in srgb,var(--panel) 94%,var(--accent) 2%)}.ocr-review-panel.hidden{display:none}.ocr-review-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.ocr-review-head>div{display:flex;align-items:baseline;gap:8px;min-width:0}.ocr-review-head b{font-size:12px}.ocr-review-head span{font-size:11px;color:var(--muted);font-weight:700}.ocr-review-text{margin-top:10px;min-height:170px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.55;resize:vertical}.ocr-review-actions{margin-top:8px;justify-content:flex-end}.ocr-review-actions .primary-btn{flex:0 0 auto}.dropzone[data-registration="unified"] p{margin-bottom:12px}
+`;
+  document.head.append(style);
+}
+function setupV41Controls(){
+  injectV41Styles();ensureOcrReviewPanelV41();renderOcrReviewV41();
+  const cardTitle=document.querySelector('.editor-pane .card .card-title');if(cardTitle)cardTitle.textContent='대화 등록';
+  const dz=$('#dropzone');if(dz){dz.dataset.registration='unified';dz.tabIndex=0;const strong=dz.querySelector('strong'),p=dz.querySelector('p');if(strong)strong.textContent='파일을 놓거나 클릭해 선택';if(p)p.textContent='로그 · 텍스트 · 스크린샷'}
+  const input=$('#logFile');if(input)input.accept='.html,.htm,.log,.txt,.png,.jpg,.jpeg,.webp,.bmp,text/html,text/plain,image/png,image/jpeg,image/webp,image/bmp';
+  $('#ocrReviewPanel')?.addEventListener('click',e=>{
+    if(e.target.id==='ocrReviewToggle'){ocrReviewV41.expanded=!ocrReviewV41.expanded;renderOcrReviewV41();setTimeout(()=>$('#ocrReviewText')?.focus(),0);return}
+    if(e.target.id==='ocrReviewApply'){applyEditedOcrTextV41();return}
+  });
+  dz?.addEventListener('paste',e=>{
+    const items=[...(e.clipboardData?.items||[])];
+    const imageItem=items.find(item=>item.kind==='file'&&/^image\//i.test(item.type||''));
+    if(imageItem){e.preventDefault();const file=imageItem.getAsFile();if(file)readLogFile(file);return}
+    const text=e.clipboardData?.getData('text/plain');
+    if(text?.trim()){
+      e.preventDefault();ocrReviewV41=null;renderOcrReviewV41();pendingImport=parseLogHTML(text,'붙여넣은 텍스트');renderImportTypeChecks();renderParseResult();
+      toast(`${pendingImport.messages.length.toLocaleString('ko-KR')}개 메시지를 찾았습니다.`);
+    }
+  });
+  window.addEventListener('beforeunload',()=>{ocrWorkerPromiseV41?.then(worker=>worker?.terminate?.()).catch(()=>{})},{once:true});
+}
+
+
+/* ==== v42 global paste + unified source review ==== */
+DEFAULT_STATE.version=42;
+let sourceReviewV42=null;
+
+function sourceLineCountV42(text){return String(text||'').split(/\r?\n/).filter(line=>line.trim()).length}
+function normalizeSourceTextV42(text,kind='text'){
+  const raw=String(text||'').replace(/\r\n?/g,'\n');
+  return kind==='ocr'?normalizeOcrTextV41(raw):raw;
+}
+function sourceReviewTitleV42(kind){
+  if(kind==='ocr')return '텍스트 인식 결과';
+  if(kind==='clipboard')return '붙여넣은 텍스트';
+  return '불러온 텍스트';
+}
+function parseSourceReviewV42(review,text){
+  const normalized=normalizeSourceTextV42(text,review.kind);
+  if(review.kind==='ocr')return {text:normalized,parsed:parseOcrTextV41(normalized,review.fileName).parsed};
+  return {text:normalized,parsed:parseLogHTML(normalized,review.fileName)};
+}
+function renderSourceReviewV42(){
+  const panel=ensureOcrReviewPanelV41();if(!panel)return;
+  if(!sourceReviewV42){panel.classList.add('hidden');panel.textContent='';return}
+  const lines=sourceLineCountV42(sourceReviewV42.text),meta=[];
+  if(sourceReviewV42.kind==='file'&&sourceReviewV42.fileName)meta.push(sourceReviewV42.fileName);
+  meta.push(`${lines.toLocaleString('ko-KR')}줄`);
+  const confidence=Number(sourceReviewV42.confidence||0);
+  if(sourceReviewV42.kind==='ocr'&&Number.isFinite(confidence)&&confidence>0)meta.push(`${Math.round(confidence)}%`);
+  panel.classList.remove('hidden');
+  panel.innerHTML=`<div class="ocr-review-head source-review-head"><div><b>${escapeHTML(sourceReviewTitleV42(sourceReviewV42.kind))}</b><span>${escapeHTML(meta.join(' · '))}</span></div><button class="tiny-btn" id="sourceReviewToggle" type="button">${sourceReviewV42.expanded?'접기':'수정'}</button></div>${sourceReviewV42.expanded?`<textarea class="textarea ocr-review-text" id="sourceReviewText" spellcheck="false">${escapeHTML(sourceReviewV42.text)}</textarea><div class="form-actions ocr-review-actions"><button class="primary-btn" id="sourceReviewApply" type="button">다시 분석</button></div>`:''}`;
+}
+function setSourceReviewV42({kind='file',fileName='대화',text='',confidence=0,expanded=null}={}){
+  const normalized=normalizeSourceTextV42(text,kind),review={kind,fileName,text:normalized,confidence:Number(confidence||0),expanded:false};
+  const {parsed}=parseSourceReviewV42(review,normalized);pendingImport=parsed;
+  review.expanded=expanded==null?!parsed.messages?.length:Boolean(expanded);sourceReviewV42=review;
+  ocrReviewV41=null;
+  renderImportTypeChecks();renderParseResult();renderSourceReviewV42();
+  return parsed;
+}
+function clearSourceReviewV42(){sourceReviewV42=null;ocrReviewV41=null;renderSourceReviewV42()}
+function applySourceReviewV42(){
+  if(!sourceReviewV42)return;
+  const input=$('#sourceReviewText'),{text,parsed}=parseSourceReviewV42(sourceReviewV42,input?.value??sourceReviewV42.text);
+  sourceReviewV42.text=text;sourceReviewV42.expanded=!parsed.messages?.length;pendingImport=parsed;
+  renderImportTypeChecks();renderParseResult();renderSourceReviewV42();
+  toast(`${(parsed.messages?.length||0).toLocaleString('ko-KR')}개 메시지로 다시 분석했습니다.`);
+}
+function isReviewableTextFileV42(file){
+  const name=String(file?.name||'').toLowerCase(),type=String(file?.type||'').toLowerCase();
+  if(/\.html?$/.test(name)||type==='text/html')return false;
+  return /\.(?:txt|log)$/.test(name)||type.startsWith('text/')||(!type&&!/\.[a-z0-9]+$/i.test(name));
+}
+async function recognizeScreenshotV42(file){
+  pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+  setProgress(2,'OCR 준비 중','이미지 인식 기능을 불러오고 있습니다.');
+  try{
+    const [worker,image]=await Promise.all([getOcrWorkerV41(),prepareOcrImageV41(file)]),result=await worker.recognize(image);
+    const raw=String(result?.data?.text||''),confidence=Number(result?.data?.confidence||0);
+    const parsed=setSourceReviewV42({kind:'ocr',fileName:file.name||'스크린샷',text:raw,confidence,expanded:confidence<55});
+    const count=parsed.messages?.length||0;
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 이미지에서 찾았습니다.`);
+    else toast('대화를 자동으로 구분하지 못했습니다. 인식 결과를 수정해 주세요.','warn',4200);
+  }catch(error){
+    console.error(error);pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+    toast('스크린샷 OCR을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.','error',5200);
+  }finally{endProgress();if($('#logFile'))$('#logFile').value=''}
+}
+const v41ReadLogFileV42=readLogFile;
+readLogFile=async function(file){
+  if(!file)return;
+  if(isOcrImageFileV41(file))return recognizeScreenshotV42(file);
+  if(isReviewableTextFileV42(file)){
+    try{
+      const text=await file.text(),parsed=setSourceReviewV42({kind:'file',fileName:file.name||'텍스트',text});
+      const format=parsed.sourceFormat?` · ${parsed.sourceFormat}`:'';
+      toast(`${(parsed.messages?.length||0).toLocaleString('ko-KR')}개 메시지${format}`);
+    }catch(error){console.error(error);toast('텍스트를 읽지 못했습니다. 파일 형식을 확인해 주세요.','error')}
+    finally{if($('#logFile'))$('#logFile').value=''}
+    return;
+  }
+  clearSourceReviewV42();return v41ReadLogFileV42(file);
+};
+function pasteIsEditingV42(target){
+  const el=target instanceof Element?target:document.activeElement;
+  if(!(el instanceof Element))return false;
+  return Boolean(el.closest('input,textarea,select,[contenteditable="true"],[contenteditable=""],[role="textbox"]'));
+}
+function handleGlobalPasteV42(e){
+  if(e.defaultPrevented||pasteIsEditingV42(e.target))return;
+  if(e.target instanceof Element&&e.target.closest('.modal-backdrop:not(.hidden)'))return;
+  const data=e.clipboardData;if(!data)return;
+  const items=[...(data.items||[])],imageItem=items.find(item=>item.kind==='file'&&/^image\//i.test(item.type||''));
+  if(imageItem){
+    const file=imageItem.getAsFile();if(!file)return;
+    e.preventDefault();e.stopImmediatePropagation();readLogFile(file);return;
+  }
+  const text=data.getData('text/plain');if(!text?.trim())return;
+  e.preventDefault();e.stopImmediatePropagation();
+  const parsed=setSourceReviewV42({kind:'clipboard',fileName:'붙여넣은 텍스트',text});
+  toast(`${(parsed.messages?.length||0).toLocaleString('ko-KR')}개 메시지를 찾았습니다.`);
+}
+const v41CommitImportV42=commitImport;
+commitImport=async function(){await v41CommitImportV42();if(!pendingImport)clearSourceReviewV42()};
+function injectV42Styles(){
+  if(document.getElementById('v42-style'))return;
+  const style=document.createElement('style');style.id='v42-style';style.textContent=`.source-review-head>div{min-width:0}.source-review-head span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dropzone[data-registration="unified"]:after{content:"어디서든 Ctrl+V로 붙여넣기";display:block;margin-top:2px;font-size:10px;font-weight:700;color:var(--muted);opacity:.72}@media(max-width:680px){.dropzone[data-registration="unified"]:after{content:"텍스트·스크린샷 붙여넣기도 지원"}}`;
+  document.head.append(style);
+}
+function setupV42Controls(){
+  injectV42Styles();ocrReviewV41=null;renderSourceReviewV42();
+  const dz=$('#dropzone');if(dz){dz.removeAttribute('tabindex');const p=dz.querySelector('p');if(p)p.textContent='로그 · 텍스트 · 스크린샷'}
+  const panel=ensureOcrReviewPanelV41();
+  panel?.addEventListener('click',e=>{
+    if(e.target.id==='sourceReviewToggle'){sourceReviewV42.expanded=!sourceReviewV42.expanded;renderSourceReviewV42();if(sourceReviewV42.expanded)setTimeout(()=>$('#sourceReviewText')?.focus(),0);return}
+    if(e.target.id==='sourceReviewApply'){applySourceReviewV42();return}
+  });
+  window.addEventListener('paste',handleGlobalPasteV42,true);
+}
+
+
+/* ==== v43 OCR English-name priority + remembered speaker correction ==== */
+DEFAULT_STATE.version=43;
+
+function ocrLatinKeyV43(value=''){
+  return normalizeRegularName(String(value||''))
+    .normalize('NFKC')
+    .toLocaleLowerCase('en-US')
+    .replace(/[0]/g,'o').replace(/[1|!]/g,'l').replace(/[5]/g,'s')
+    .replace(/[^a-z0-9]+/g,'');
+}
+function ocrSpeakerLexiconV43(){
+  ensureSettings();
+  const byKey=new Map();
+  const add=(matchName,sourceName)=>{
+    const source=normalizeRegularName(sourceName||matchName||''),match=normalizeSpeakerDisplayName(matchName||source);
+    const key=ocrLatinKeyV43(match);
+    if(!source||!key||!/^[a-z0-9]+$/.test(key)||key.length<3)return;
+    if(!byKey.has(key))byKey.set(key,{match,source,key});
+  };
+  for(const m of state.members||[]){const source=speakerSourceName(m);add(source,source);add(m.name,source)}
+  for(const p of Object.values(state.speakerProfiles||{})){const source=normalizeRegularName(p?.sourceName||p?.name||'');add(source,source);add(p?.name,source)}
+  for(const m of Object.values(state.archivedMembers||{})){const source=speakerSourceName(m);add(source,source);add(m?.name,source)}
+  return [...byKey.values()];
+}
+function levenshteinV43(a='',b=''){
+  if(a===b)return 0;if(!a)return b.length;if(!b)return a.length;
+  const prev=new Array(b.length+1),cur=new Array(b.length+1);for(let j=0;j<=b.length;j++)prev[j]=j;
+  for(let i=1;i<=a.length;i++){
+    cur[0]=i;
+    for(let j=1;j<=b.length;j++)cur[j]=Math.min(cur[j-1]+1,prev[j]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    for(let j=0;j<=b.length;j++)prev[j]=cur[j];
+  }
+  return prev[b.length];
+}
+function bestKnownSpeakerV43(rawCandidate,lexicon){
+  const cleaned=normalizeRegularName(String(rawCandidate||'').replace(/[\uE000-\uF8FF]/g,' ').replace(/[♣♠♥♦★☆✦✧❀✿◆◇●○]+/g,' ').replace(/\s+/g,' ').trim());
+  const key=ocrLatinKeyV43(cleaned);if(key.length<3||!/[a-z]/.test(key))return null;
+  const exact=lexicon.find(x=>x.key===key);if(exact)return {...exact,score:1,distance:0,raw:rawCandidate};
+  const scored=lexicon.map(x=>{const distance=levenshteinV43(key,x.key),max=Math.max(key.length,x.key.length),score=max?1-distance/max:0;return {...x,distance,score,raw:rawCandidate}}).sort((a,b)=>b.score-a.score||a.distance-b.distance);
+  const best=scored[0],second=scored[1];if(!best)return null;
+  const maxDist=key.length>=9?2:key.length>=5?1:0;
+  const minScore=key.length<=4?.86:.78;
+  const margin=second?best.score-second.score:1;
+  if(best.distance>maxDist||best.score<minScore||margin<.08)return null;
+  return best;
+}
+function correctOcrSpeakerNamesV43(text=''){
+  const lexicon=ocrSpeakerLexiconV43();if(!lexicon.length)return {text:String(text||''),corrections:[]};
+  const corrections=[];let out=String(text||'');
+  out=out.replace(/<([^>\n]{1,90})>/g,(whole,inside)=>{
+    if(!/[A-Za-z]/.test(inside))return whole;
+    const hit=bestKnownSpeakerV43(inside,lexicon);if(!hit)return whole;
+    const rawClean=normalizeRegularName(inside);
+    if(sourceProfileKey(rawClean)===sourceProfileKey(hit.source))return `<${inside}>`;
+    corrections.push({from:inside.trim(),to:hit.source,score:hit.score});return `<${hit.source}>`;
+  });
+  out=out.split(/\r?\n/).map(line=>{
+    const m=line.match(/^\s*([^\n]{2,70}?)\s+[—–-]\s+((?:오전|오후)\s*\d{1,2}:\d{2}|(?:AM|PM)\s*\d{1,2}:\d{2}|\d{1,2}:\d{2})(.*)$/i);
+    if(!m||!/[A-Za-z]/.test(m[1]))return line;
+    const hit=bestKnownSpeakerV43(m[1],lexicon);if(!hit)return line;
+    const rawClean=normalizeRegularName(m[1]);if(sourceProfileKey(rawClean)===sourceProfileKey(hit.source))return line;
+    corrections.push({from:m[1].trim(),to:hit.source,score:hit.score});return `${hit.source} — ${m[2]}${m[3]||''}`;
+  }).join('\n');
+  const unique=[];const seen=new Set();for(const c of corrections){const k=`${c.from}\u0000${c.to}`;if(!seen.has(k)){seen.add(k);unique.push(c)}}
+  return {text:out,corrections:unique};
+}
+
+// English-first ordering helps Latin nicknames while keeping Korean recognition available.
+getOcrWorkerV41=async function(){
+  if(ocrWorkerPromiseV41)return ocrWorkerPromiseV41;
+  ocrWorkerPromiseV41=(async()=>{
+    const T=await loadTesseractV41();
+    return await T.createWorker('eng+kor',1,{logger:setOcrProgressV41});
+  })().catch(error=>{ocrWorkerPromiseV41=null;throw error});
+  return ocrWorkerPromiseV41;
+};
+
+const v42RenderSourceReviewV43=renderSourceReviewV42;
+renderSourceReviewV42=function(){
+  v42RenderSourceReviewV43();
+  if(sourceReviewV42?.kind!=='ocr'||!sourceReviewV42.corrections?.length)return;
+  const span=$('#ocrReviewPanel .source-review-head span');if(span&&!span.dataset.v43Correction){span.textContent+=` · 닉네임 보정 ${sourceReviewV42.corrections.length.toLocaleString('ko-KR')}건`;span.dataset.v43Correction='1'}
+};
+
+recognizeScreenshotV42=async function(file){
+  pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+  setProgress(2,'OCR 준비 중','이미지 인식 기능을 불러오고 있습니다.');
+  try{
+    const [worker,image]=await Promise.all([getOcrWorkerV41(),prepareOcrImageV41(file)]),result=await worker.recognize(image);
+    const raw=String(result?.data?.text||''),confidence=Number(result?.data?.confidence||0),corrected=correctOcrSpeakerNamesV43(raw);
+    const parsed=setSourceReviewV42({kind:'ocr',fileName:file.name||'스크린샷',text:corrected.text,confidence,expanded:confidence<55});
+    if(sourceReviewV42)sourceReviewV42.corrections=corrected.corrections;
+    renderSourceReviewV42();
+    const count=parsed.messages?.length||0;
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 이미지에서 찾았습니다.${corrected.corrections.length?` 닉네임 ${corrected.corrections.length}건을 기억된 화자명으로 보정했습니다.`:''}`);
+    else toast('대화를 자동으로 구분하지 못했습니다. 인식 결과를 수정해 주세요.','warn',4200);
+  }catch(error){
+    console.error(error);pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+    toast('스크린샷 OCR을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.','error',5200);
+  }finally{endProgress();if($('#logFile'))$('#logFile').value=''}
+};
+
+const v42ApplySourceReviewV43=applySourceReviewV42;
+applySourceReviewV42=function(){if(sourceReviewV42)sourceReviewV42.corrections=[];return v42ApplySourceReviewV43()};
+function setupV43Controls(){/* OCR changes are lazy and require no permanent UI. */}
 function setupV33Controls(){
   // No extra panel: sourceName is an internal stable key. Keep the editor visually unchanged.
+}
+
+
+
+/* ==== v44 OCR cleanup for spaced text + noisy bracket speakers ==== */
+DEFAULT_STATE.version=44;
+const OCR_WORLD_NAMES_V44=(Array.isArray(WORLD_NAME_SUFFIXES)?WORLD_NAME_SUFFIXES:['모그리','톤베리','초코보','카벙클','펜리르']).slice();
+
+function normalizeOcrChannelLabelV44(label=''){
+  const compact=String(label||'')
+    .replace(/[\u00a0\t]/g,' ')
+    .replace(/[\]）)】}>]+$/g,'')
+    .replace(/^[\[（(【<{]+/g,'')
+    .replace(/[^\w가-힣\s-]/g,' ')
+    .replace(/\s+/g,'')
+    .trim();
+  if(!compact)return '';
+  let m=compact.match(/(?:서버?초월?링크셸|서초링크셸|서초링|크로스월드링크셸|crossworldlinkshell)(\d+)/i);
+  if(m)return `서초링 ${Math.max(1,Math.min(8,Number(m[1])||1))}`;
+  m=compact.match(/(?:링크셸|링셸|linkshell)(\d+)/i);
+  if(m)return `링크셸 ${Math.max(1,Math.min(8,Number(m[1])||1))}`;
+  if(/(?:말하기|일반|say)/i.test(compact))return '말하기';
+  if(/(?:떠들기|yell)/i.test(compact))return '떠들기';
+  if(/(?:외치기|shout)/i.test(compact))return '외치기';
+  if(/(?:파티|party)/i.test(compact))return '파티';
+  if(/(?:연합|alliance)/i.test(compact))return '연합';
+  if(/(?:자유부대|freecompany)/i.test(compact))return '자유부대';
+  if(/(?:귓속말|tell)/i.test(compact))return '귓속말';
+  return compact;
+}
+function collapseOcrSingleHangulRunsV44(text=''){
+  const words=String(text||'').trim().split(/\s+/).filter(Boolean);if(!words.length)return '';
+  const out=[];let run=[];
+  const pushRun=()=>{
+    if(!run.length)return;
+    if(run.length>=3&&run.every(token=>/^[가-힣][,.!?~…]*$/.test(token)))out.push(run.join(''));
+    else out.push(...run);
+    run=[];
+  };
+  for(const token of words){
+    if(/^[가-힣][,.!?~…]*$/.test(token))run.push(token);
+    else{pushRun();out.push(token)}
+  }
+  pushRun();
+  return out.join(' ')
+    .replace(/\s+([,.!?…~])/g,'$1')
+    .replace(/([,.!?…~])(\S)/g,'$1 $2')
+    .replace(/\s{2,}/g,' ')
+    .trim();
+}
+function cleanOcrSpeakerInnerV44(inner=''){
+  let s=String(inner||'')
+    .replace(/[\uE000-\uF8FF]/g,' ')
+    .replace(/[＜〈《]/g,'<').replace(/[＞〉》]/g,'>')
+    .replace(/[\u00a0\t]/g,' ')
+    .replace(/[♣♠♥♦★☆✦✧❀✿◆◇●○※#@]/g,' ')
+    .replace(/[“”"`´]/g,'')
+    .replace(/\s+/g,' ')
+    .trim();
+  if(!s)return '';
+  const rawNoSpace=s.replace(/\s+/g,'');
+  const world=(OCR_WORLD_NAMES_V44.find(name=>rawNoSpace.includes(name))||'');
+  if(world){
+    s=rawNoSpace.replace(world,'')+world;
+  }else if(/^[A-Za-z0-9'’._ -]+$/.test(s) || /^[가-힣A-Za-z0-9'’._ -]+$/.test(s)){
+    s=s.replace(/\s+/g,'');
+  }
+  return s.trim();
+}
+function normalizeOcrBodyV44(body=''){
+  return collapseOcrSingleHangulRunsV44(String(body||'')
+    .replace(/[\u00a0\t]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim());
+}
+function normalizeOcrChatLineV44(line=''){
+  let s=String(line||'').replace(/\r/g,'').replace(/\u00a0/g,' ').trim();
+  if(!s)return '';
+  s=s.replace(/[［【]/g,'[').replace(/[］】]/g,']').replace(/[＜〈《]/g,'<').replace(/[＞〉》]/g,'>');
+  s=s.replace(/^\[\s*(\d{1,2})\s*:\s*(\d{2})(?:\s*:\s*(\d{2}))?\s*\]/,(m,h,mn,sec)=>`[${h}:${mn}${sec?`:${sec}`:''}]`);
+  s=s.replace(/^(\[\d{1,2}:\d{2}(?::\d{2})?\])\s*[\[(]\s*([^\]\)\n]{1,80}?)\s*[\]\)]\s*/,(m,time,channel)=>`${time}[${normalizeOcrChannelLabelV44(channel)}] `);
+  s=s.replace(/<([^>\n]{1,120})>/g,(m,inner)=>`<${cleanOcrSpeakerInnerV44(inner)}>`);
+  s=s.replace(/\[([^\]\n]{1,80})\]/g,(m,body)=>/^\d{1,2}:\d{2}(?::\d{2})?$/.test(body.replace(/\s+/g,''))?`[${body.replace(/\s+/g,'')}]`:`[${normalizeOcrChannelLabelV44(body)}]`);
+  s=s.replace(/\]\s+</g,']<').replace(/>\s+/g,'> ').replace(/\s{2,}/g,' ').trim();
+  const m=s.match(/^(\[\d{1,2}:\d{2}(?::\d{2})?\])(?:\s*(\[[^\]]+\]))?(?:\s*<([^>]+)>)?\s*(.*)$/);
+  if(m){
+    const parts=[m[1]];
+    if(m[2])parts.push(m[2]);
+    if(m[3])parts.push(`<${cleanOcrSpeakerInnerV44(m[3])}>`);
+    const body=normalizeOcrBodyV44(m[4]||'');
+    return `${parts.join('')}${body?` ${body}`:''}`.trim();
+  }
+  return normalizeOcrBodyV44(s);
+}
+normalizeOcrTextV41=function(text){
+  return String(text||'')
+    .replace(/\r\n?/g,'\n')
+    .split('\n')
+    .map(normalizeOcrChatLineV44)
+    .filter(Boolean)
+    .join('\n');
+};
+ocrLatinKeyV43=function(value=''){
+  return cleanOcrSpeakerInnerV44(value)
+    .normalize('NFKC')
+    .toLocaleLowerCase('en-US')
+    .replace(/[0]/g,'o').replace(/[1|!]/g,'l').replace(/[3]/g,'e').replace(/[4]/g,'a').replace(/[5]/g,'s').replace(/[6]/g,'g').replace(/[7]/g,'t').replace(/[8]/g,'b')
+    .replace(/[^a-z0-9]+/g,'');
+};
+function ocrSpeakerKeyV44(value=''){
+  const raw=cleanOcrSpeakerInnerV44(value),world=OCR_WORLD_NAMES_V44.find(name=>raw.includes(name));
+  const base=world?raw.replace(world,''):raw;
+  return ocrLatinKeyV43(base);
+}
+bestKnownSpeakerV43=function(rawCandidate,lexicon){
+  const key=ocrSpeakerKeyV44(rawCandidate);if(key.length<3||!/[a-z]/.test(key))return null;
+  const exact=lexicon.find(x=>x.key===key);if(exact)return {...exact,score:1,distance:0,raw:rawCandidate};
+  const scored=lexicon.map(x=>{const distance=levenshteinV43(key,x.key),max=Math.max(key.length,x.key.length),score=max?1-distance/max:0;return {...x,distance,score,raw:rawCandidate}}).sort((a,b)=>b.score-a.score||a.distance-b.distance);
+  const best=scored[0],second=scored[1];if(!best)return null;
+  const maxDist=key.length>=9?2:key.length>=5?1:0;
+  const minScore=key.length<=4?.86:.72;
+  const margin=second?best.score-second.score:1;
+  if(best.distance>maxDist||best.score<minScore||margin<.06)return null;
+  return best;
+};
+correctOcrSpeakerNamesV43=function(text=''){
+  const lexicon=ocrSpeakerLexiconV43();if(!lexicon.length)return {text:normalizeOcrTextV41(String(text||'')),corrections:[]};
+  const corrections=[];let out=normalizeOcrTextV41(String(text||''));
+  out=out.replace(/<([^>\n]{1,120})>/g,(whole,inside)=>{
+    const cleaned=cleanOcrSpeakerInnerV44(inside),hit=bestKnownSpeakerV43(cleaned,lexicon);if(!hit)return `<${cleaned}>`;
+    const rawClean=normalizeRegularName(cleaned);if(sourceProfileKey(rawClean)===sourceProfileKey(hit.source))return `<${cleaned}>`;
+    corrections.push({from:cleaned.trim(),to:hit.source,score:hit.score});return `<${hit.source}>`;
+  });
+  out=out.split(/\r?\n/).map(line=>{
+    const m=line.match(/^\s*([^\n]{2,70}?)\s+[—–-]\s+((?:오전|오후)\s*\d{1,2}:\d{2}|(?:AM|PM)\s*\d{1,2}:\d{2}|\d{1,2}:\d{2})(.*)$/i);
+    if(!m)return line;
+    const hit=bestKnownSpeakerV43(m[1],lexicon);if(!hit)return line;
+    const rawClean=normalizeRegularName(m[1]);if(sourceProfileKey(rawClean)===sourceProfileKey(hit.source))return line;
+    corrections.push({from:m[1].trim(),to:hit.source,score:hit.score});return `${hit.source} — ${m[2]}${m[3]||''}`;
+  }).join('\n');
+  const unique=[];const seen=new Set();for(const c of corrections){const k=`${c.from}\u0000${c.to}`;if(!seen.has(k)){seen.add(k);unique.push(c)}}
+  return {text:out,corrections:unique};
+};
+getOcrWorkerV41=async function(){
+  if(ocrWorkerPromiseV41)return ocrWorkerPromiseV41;
+  ocrWorkerPromiseV41=(async()=>{
+    const T=await loadTesseractV41();
+    const worker=await T.createWorker('eng+kor',1,{logger:setOcrProgressV41});
+    try{await worker.setParameters({tessedit_pageseg_mode:String(T.PSM?.SINGLE_BLOCK||6)})}catch{}
+    return worker;
+  })().catch(error=>{ocrWorkerPromiseV41=null;throw error});
+  return ocrWorkerPromiseV41;
+};
+const v43RenderSourceReviewV44=renderSourceReviewV42;
+renderSourceReviewV42=function(){
+  v43RenderSourceReviewV44();
+  if(sourceReviewV42?.kind!=='ocr'||!sourceReviewV42.corrections?.length)return;
+  const span=$('#ocrReviewPanel .source-review-head span');
+  if(span&&!span.dataset.v44Correction){span.textContent+=` · 닉네임 보정 ${sourceReviewV42.corrections.length.toLocaleString('ko-KR')}건`;span.dataset.v44Correction='1'}
+};
+recognizeScreenshotV42=async function(file){
+  pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+  setProgress(2,'OCR 준비 중','이미지 인식 기능을 불러오고 있습니다.');
+  try{
+    const [worker,image]=await Promise.all([getOcrWorkerV41(),prepareOcrImageV41(file)]),result=await worker.recognize(image);
+    const raw=String(result?.data?.text||''),confidence=Number(result?.data?.confidence||0),corrected=correctOcrSpeakerNamesV43(raw);
+    const parsed=setSourceReviewV42({kind:'ocr',fileName:file.name||'스크린샷',text:corrected.text,confidence,expanded:confidence<55});
+    if(sourceReviewV42)sourceReviewV42.corrections=corrected.corrections;
+    renderSourceReviewV42();
+    const count=parsed.messages?.length||0;
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 이미지에서 찾았습니다.${corrected.corrections.length?` 닉네임 ${corrected.corrections.length}건을 기억된 화자명으로 보정했습니다.`:''}`);
+    else toast('대화를 자동으로 구분하지 못했습니다. 인식 결과를 수정해 주세요.','warn',4200);
+  }catch(error){
+    console.error(error);pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+    toast('스크린샷 OCR을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.','error',5200);
+  }finally{endProgress();if($('#logFile'))$('#logFile').value=''}
+};
+const v43ApplySourceReviewV44=applySourceReviewV42;
+applySourceReviewV42=function(){if(sourceReviewV42)sourceReviewV42.corrections=[];return v43ApplySourceReviewV44()};
+
+
+
+/* ==== v45 Korean-first OCR + targeted English speaker retry ==== */
+DEFAULT_STATE.version=45;
+let ocrEnglishWorkerPromiseV45=null;
+
+function cleanOcrSpeakerV45(inner=''){
+  let s=String(inner||'')
+    .replace(/[\uE000-\uF8FF]/g,' ')
+    .replace(/[♣♠♥♦★☆✦✧❀✿◆◇●○※#@]/g,' ')
+    .replace(/[\u00a0\t]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+  for(const world of OCR_WORLD_NAMES_V44){
+    const spaced=[...world].join('\\s*');
+    const re=new RegExp(`\\s*${spaced}\\s*$`,'i');
+    if(re.test(s)){s=s.replace(re,world);break}
+  }
+  return s.trim();
+}
+function normalizeOcrChannelV45(body=''){
+  let s=String(body||'').replace(/[\u00a0\t]/g,' ').replace(/\s+/g,' ').trim();
+  const compact=s.replace(/\s+/g,'');
+  let m=compact.match(/(?:서(?:버)?초(?:월)?링(?:크셸)?|서초링|크로스월드링크셸)(\d+)/i);
+  if(m)return `서초링 ${Math.max(1,Math.min(8,Number(m[1])||1))}`;
+  m=compact.match(/(?:링크셸|링셸|linkshell)(\d+)/i);
+  if(m)return `링크셸 ${Math.max(1,Math.min(8,Number(m[1])||1))}`;
+  return s;
+}
+normalizeOcrTextV41=function(text){
+  return String(text||'')
+    .replace(/\r\n?/g,'\n')
+    .replace(/[＜〈《]/g,'<').replace(/[＞〉》]/g,'>')
+    .replace(/[［【]/g,'[').replace(/[］】]/g,']')
+    .split('\n')
+    .map(line=>line.replace(/\u00a0/g,' ').replace(/[\t ]+/g,' ').trim())
+    .map(line=>{
+      let s=line
+        .replace(/^\[\s*(\d{1,2})\s*:\s*(\d{2})(?:\s*:\s*(\d{2}))?\s*\]/,(m,h,mn,sec)=>`[${h}:${mn}${sec?`:${sec}`:''}]`)
+        .replace(/<([^>\n]{1,120})>/g,(m,inner)=>`<${cleanOcrSpeakerV45(inner)}>`)
+        .replace(/<\s+/g,'<').replace(/\s+>/g,'>');
+      s=s.replace(/^(\[\d{1,2}:\d{2}(?::\d{2})?\])\s*\[([^\]]+)\]/,(m,time,channel)=>`${time}[${normalizeOcrChannelV45(channel)}]`);
+      return s;
+    })
+    .filter(Boolean)
+    .join('\n');
+};
+
+ocrLatinKeyV43=function(value=''){
+  return cleanOcrSpeakerV45(value)
+    .normalize('NFKC')
+    .toLocaleLowerCase('en-US')
+    .replace(/[0]/g,'o').replace(/[1|!]/g,'l').replace(/[5]/g,'s')
+    .replace(/[^a-z0-9]+/g,'');
+};
+function ocrCandidateWithoutWorldV45(value=''){
+  let s=cleanOcrSpeakerV45(value);
+  for(const world of OCR_WORLD_NAMES_V44){if(s.endsWith(world)){s=s.slice(0,-world.length).trim();break}}
+  return s;
+}
+bestKnownSpeakerV43=function(rawCandidate,lexicon){
+  const key=ocrLatinKeyV43(ocrCandidateWithoutWorldV45(rawCandidate));if(key.length<3||!/[a-z]/.test(key))return null;
+  const exact=lexicon.find(x=>x.key===key);if(exact)return {...exact,score:1,distance:0,raw:rawCandidate};
+  const scored=lexicon.map(x=>{const distance=levenshteinV43(key,x.key),max=Math.max(key.length,x.key.length),score=max?1-distance/max:0;return {...x,distance,score,raw:rawCandidate}}).sort((a,b)=>b.score-a.score||a.distance-b.distance);
+  const best=scored[0],second=scored[1];if(!best)return null;
+  const maxDist=key.length>=9?2:key.length>=5?1:0,minScore=key.length<=4?.86:.78,margin=second?best.score-second.score:1;
+  if(best.distance>maxDist||best.score<minScore||margin<.08)return null;
+  return best;
+};
+correctOcrSpeakerNamesV43=function(text=''){
+  const lexicon=ocrSpeakerLexiconV43(),corrections=[];let out=normalizeOcrTextV41(String(text||''));
+  if(!lexicon.length)return {text:out,corrections};
+  out=out.replace(/<([^>\n]{1,120})>/g,(whole,inside)=>{
+    const cleaned=cleanOcrSpeakerV45(inside),hit=bestKnownSpeakerV43(cleaned,lexicon);if(!hit)return `<${cleaned}>`;
+    const rawClean=normalizeRegularName(cleaned);if(sourceProfileKey(rawClean)===sourceProfileKey(hit.source))return `<${cleaned}>`;
+    corrections.push({from:cleaned.trim(),to:hit.source,score:hit.score,method:'fuzzy'});return `<${hit.source}>`;
+  });
+  const unique=[],seen=new Set();for(const c of corrections){const k=`${c.from}\u0000${c.to}`;if(!seen.has(k)){seen.add(k);unique.push(c)}}
+  return {text:out,corrections:unique};
+};
+
+getOcrWorkerV41=async function(){
+  if(ocrWorkerPromiseV41)return ocrWorkerPromiseV41;
+  ocrWorkerPromiseV41=(async()=>{
+    const T=await loadTesseractV41();
+    return await T.createWorker('kor+eng',1,{logger:setOcrProgressV41});
+  })().catch(error=>{ocrWorkerPromiseV41=null;throw error});
+  return ocrWorkerPromiseV41;
+};
+async function getOcrEnglishWorkerV45(){
+  if(ocrEnglishWorkerPromiseV45)return ocrEnglishWorkerPromiseV45;
+  ocrEnglishWorkerPromiseV45=(async()=>{
+    const T=await loadTesseractV41();
+    return await T.createWorker('eng',1,{logger:()=>{}});
+  })().catch(error=>{ocrEnglishWorkerPromiseV45=null;throw error});
+  return ocrEnglishWorkerPromiseV45;
+}
+function ocrLineRecordsV45(data){
+  const out=[];
+  const add=line=>{const text=String(line?.text||'').trim(),bbox=line?.bbox;if(text&&bbox&&Number.isFinite(bbox.x0)&&Number.isFinite(bbox.y0)&&Number.isFinite(bbox.x1)&&Number.isFinite(bbox.y1))out.push({text,bbox})};
+  if(Array.isArray(data?.lines))data.lines.forEach(add);
+  const walk=node=>{
+    if(!node||typeof node!=='object')return;
+    if(Array.isArray(node.lines))node.lines.forEach(add);
+    for(const key of ['blocks','paragraphs'])if(Array.isArray(node[key]))node[key].forEach(walk);
+  };
+  if(!out.length&&Array.isArray(data?.blocks))data.blocks.forEach(walk);
+  return out.sort((a,b)=>a.bbox.y0-b.bbox.y0||a.bbox.x0-b.bbox.x0);
+}
+function unresolvedLatinSpeakerRowsV45(lines,lexicon){
+  if(!lexicon.length)return [];
+  const rows=[];
+  lines.forEach((line,index)=>{
+    const m=String(line||'').match(/<([^>\n]{1,120})>/);if(!m)return;
+    const candidate=cleanOcrSpeakerV45(m[1]);
+    if(bestKnownSpeakerV43(candidate,lexicon))return;
+    const base=ocrCandidateWithoutWorldV45(candidate);
+    if(!base)return;
+    // Retry only noisy candidates; a clean unknown Latin name should remain untouched.
+    if(/^[A-Za-z][A-Za-z'’._ -]{2,}$/.test(base))return;
+    rows.push({index,candidate});
+  });
+  return rows;
+}
+async function loadImageForOcrV45(src){
+  return await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src});
+}
+async function cropOcrLineV45(imageSource,bbox){
+  const img=await loadImageForOcrV45(imageSource),padY=4;
+  const x0=Math.max(0,Math.floor(bbox.x0||0)),y0=Math.max(0,Math.floor((bbox.y0||0)-padY));
+  const x1=Math.min(img.naturalWidth||img.width,Math.ceil(bbox.x1||img.width)),y1=Math.min(img.naturalHeight||img.height,Math.ceil((bbox.y1||0)+padY));
+  const w=Math.max(1,x1-x0),h=Math.max(1,y1-y0),scale=h<52?2:1;
+  const canvas=document.createElement('canvas');canvas.width=Math.round(w*scale);canvas.height=Math.round(h*scale);
+  const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,x0,y0,w,h,0,0,canvas.width,canvas.height);
+  return canvas.toDataURL('image/png');
+}
+function bestLexiconFromEnglishTextV45(text,lexicon){
+  const raw=String(text||'').normalize('NFKC').toLocaleLowerCase('en-US');
+  const tokens=raw.match(/[a-z0-9|!]{3,}/g)||[],candidates=[];
+  for(let i=0;i<tokens.length;i++){
+    candidates.push(tokens[i]);
+    if(i+1<tokens.length)candidates.push(tokens[i]+tokens[i+1]);
+  }
+  let scores=[];
+  for(const token of candidates){
+    const key=token.replace(/[0]/g,'o').replace(/[1|!]/g,'l').replace(/[5]/g,'s').replace(/[^a-z0-9]/g,'');if(key.length<3)continue;
+    for(const x of lexicon){
+      const d=levenshteinV43(key,x.key),max=Math.max(key.length,x.key.length),score=max?1-d/max:0;
+      if(d===0||d<=1&&score>=.8)scores.push({...x,distance:d,score});
+    }
+  }
+  scores.sort((a,b)=>b.score-a.score||a.distance-b.distance);
+  const best=scores[0],second=scores[1];if(!best)return null;
+  if(second&&second.source!==best.source&&best.score-second.score<.08)return null;
+  return best;
+}
+async function retryEnglishSpeakersV45(imageSource,baseLines,lineRecords,rows,lexicon){
+  if(!rows.length||!lineRecords.length)return {lines:baseLines,corrections:[]};
+  const worker=await getOcrEnglishWorkerV45(),lines=baseLines.slice(),corrections=[];
+  for(let n=0;n<rows.length;n++){
+    const row=rows[n],rec=lineRecords[row.index];if(!rec?.bbox)continue;
+    try{
+      setProgress(78+Math.round((n/Math.max(1,rows.length))*18),'영문 닉네임 확인 중',`${n+1} / ${rows.length}`);
+      const crop=await cropOcrLineV45(imageSource,rec.bbox),res=await worker.recognize(crop),hit=bestLexiconFromEnglishTextV45(res?.data?.text||'',lexicon);
+      if(!hit)continue;
+      const before=lines[row.index];
+      lines[row.index]=before.replace(/<([^>\n]{1,120})>/,`<${hit.source}>`);
+      if(lines[row.index]!==before)corrections.push({from:row.candidate,to:hit.source,score:hit.score,method:'eng-retry'});
+    }catch(error){console.warn('English speaker retry failed',error)}
+  }
+  return {lines,corrections};
+}
+
+recognizeScreenshotV42=async function(file){
+  pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+  setProgress(2,'OCR 준비 중','이미지 인식 기능을 불러오고 있습니다.');
+  try{
+    const [worker,image]=await Promise.all([getOcrWorkerV41(),prepareOcrImageV41(file)]);
+    let result;
+    try{result=await worker.recognize(image,{}, {blocks:true})}catch{result=await worker.recognize(image)}
+    const records=ocrLineRecordsV45(result?.data),raw=(records.length?records.map(r=>r.text).join('\n'):String(result?.data?.text||''));
+    const confidence=Number(result?.data?.confidence||0),first=correctOcrSpeakerNamesV43(raw),lexicon=ocrSpeakerLexiconV43();
+    let finalText=first.text,corrections=first.corrections.slice();
+    const normalizedLines=finalText.split(/\r?\n/),retryRows=unresolvedLatinSpeakerRowsV45(normalizedLines,lexicon);
+    if(retryRows.length&&records.length===normalizedLines.length){
+      const retried=await retryEnglishSpeakersV45(image,normalizedLines,records,retryRows,lexicon);
+      finalText=retried.lines.join('\n');corrections.push(...retried.corrections);
+    }
+    const parsed=setSourceReviewV42({kind:'ocr',fileName:file.name||'스크린샷',text:finalText,confidence,expanded:confidence<55});
+    if(sourceReviewV42){
+      const uniq=[],seen=new Set();for(const c of corrections){const k=`${c.from}\u0000${c.to}`;if(!seen.has(k)){seen.add(k);uniq.push(c)}}sourceReviewV42.corrections=uniq;
+    }
+    renderSourceReviewV42();
+    const count=parsed.messages?.length||0,fixes=sourceReviewV42?.corrections?.length||0;
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 이미지에서 찾았습니다.${fixes?` 닉네임 ${fixes}건을 보정했습니다.`:''}`);
+    else toast('대화를 자동으로 구분하지 못했습니다. 인식 결과를 수정해 주세요.','warn',4200);
+  }catch(error){
+    console.error(error);pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+    toast('스크린샷 OCR을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.','error',5200);
+  }finally{endProgress();if($('#logFile'))$('#logFile').value=''}
+};
+function setupV45Controls(){
+  window.addEventListener('beforeunload',()=>{ocrEnglishWorkerPromiseV45?.then(worker=>worker?.terminate?.()).catch(()=>{})},{once:true});
+}
+
+
+
+/* v45.1: English speaker retry also works on a first-time screenshot with no speaker memory. */
+function speakerCropBBoxV45(record){
+  const text=String(record?.text||''),box=record?.bbox;if(!box)return null;
+  const width=Math.max(1,box.x1-box.x0),len=Math.max(1,text.length),lt=text.indexOf('<'),gt=lt>=0?text.indexOf('>',lt+1):-1;
+  if(lt>=0){
+    const start=Math.max(0,lt-1),end=gt>lt?Math.min(len,gt+2):Math.min(len,lt+Math.max(10,Math.round(len*.24)));
+    const x0=Math.max(box.x0,box.x0+width*(start/len)-18),x1=Math.min(box.x1,box.x0+width*(end/len)+24);
+    return {x0,y0:box.y0,x1:Math.max(x0+20,x1),y1:box.y1};
+  }
+  return box;
+}
+function unresolvedLatinSpeakerRowsV45(lines,lexicon=[]){
+  const rows=[];
+  lines.forEach((line,index)=>{
+    const m=String(line||'').match(/<([^>\n]{1,120})>/);if(!m)return;
+    const candidate=cleanOcrSpeakerV45(m[1]);
+    if(lexicon.length&&bestKnownSpeakerV43(candidate,lexicon))return;
+    const base=ocrCandidateWithoutWorldV45(candidate);if(!base)return;
+    // A clean Korean-only name is not sent to English OCR. Latin-looking or visibly noisy names are.
+    const asciiLetters=(base.match(/[A-Za-z]/g)||[]).length,asciiNoise=(base.match(/[0-9#@|!]/g)||[]).length;
+    if(asciiLetters||asciiNoise>=2)rows.push({index,candidate});
+  });
+  return rows;
+}
+function bestEnglishSpeakerDirectV45(text,lexicon=[]){
+  const known=lexicon.length?bestLexiconFromEnglishTextV45(text,lexicon):null;if(known)return {...known,name:known.source,known:true};
+  const raw=String(text||'').replace(/[<>\[\]{}()]/g,' ').replace(/[^A-Za-z0-9'’._ -]+/g,' ').replace(/\s+/g,' ').trim();
+  let tokens=raw.split(' ').filter(Boolean).map(t=>t.replace(/^[^A-Za-z]+|[^A-Za-z0-9'’._-]+$/g,'')).filter(t=>/^[A-Za-z][A-Za-z0-9'’._-]{2,29}$/.test(t));
+  if(!tokens.length)return null;
+  // OCR sometimes turns letters into digits; reject tokens that are mostly digits after the first letter.
+  tokens=tokens.filter(t=>(t.match(/[A-Za-z]/g)||[]).length/Math.max(1,t.length)>=.65);if(!tokens.length)return null;
+  const title=t=>/^[A-Z][A-Za-z'’._-]*$/.test(t);
+  let chosen=tokens[0];
+  if(tokens.length>1&&title(tokens[0])&&title(tokens[1])&&tokens[1].length>=3)chosen=`${tokens[0]} ${tokens[1]}`;
+  return {name:chosen,source:chosen,score:.82,known:false};
+}
+async function retryEnglishSpeakersV45(imageSource,baseLines,lineRecords,rows,lexicon=[]){
+  if(!rows.length||!lineRecords.length)return {lines:baseLines,corrections:[]};
+  const worker=await getOcrEnglishWorkerV45(),lines=baseLines.slice(),corrections=[];
+  for(let n=0;n<rows.length;n++){
+    const row=rows[n],rec=lineRecords[row.index],speakerBox=speakerCropBBoxV45(rec);if(!speakerBox)continue;
+    try{
+      setProgress(78+Math.round((n/Math.max(1,rows.length))*18),'영문 닉네임 확인 중',`${n+1} / ${rows.length}`);
+      const crop=await cropOcrLineV45(imageSource,speakerBox),res=await worker.recognize(crop),hit=bestEnglishSpeakerDirectV45(res?.data?.text||'',lexicon);
+      if(!hit?.name)continue;
+      const before=lines[row.index],old=cleanOcrSpeakerV45((before.match(/<([^>\n]{1,120})>/)||[])[1]||'');
+      if(sourceProfileKey(old)===sourceProfileKey(hit.name))continue;
+      lines[row.index]=before.replace(/<([^>\n]{1,120})>/,`<${hit.name}>`);
+      if(lines[row.index]!==before)corrections.push({from:row.candidate,to:hit.name,score:hit.score,method:hit.known?'eng-known':'eng-retry'});
+    }catch(error){console.warn('English speaker retry failed',error)}
+  }
+  return {lines,corrections};
+}
+
+
+
+/* ==== v46 geometry-first English speaker recovery ==== */
+DEFAULT_STATE.version=46;
+
+function speakerEnvelopeV46(line=''){
+  const s=String(line||'');
+  let m=s.match(/<([^>\n]{1,120})>/);
+  if(m){const start=m.index,end=start+m[0].length;return {start,end,candidate:m[1],kind:'angles'}}
+  const gt=s.indexOf('>');
+  if(gt>=0){
+    const before=s.slice(0,gt),lastBracket=before.lastIndexOf(']');
+    let start=lastBracket>=0?lastBracket+1:0;
+    while(start<gt&&/\s/.test(s[start]))start++;
+    const candidate=s.slice(start,gt).trim();
+    if(candidate&&candidate.length<=120)return {start,end:gt+1,candidate,kind:'closing-angle'};
+  }
+  const prefix=(s.match(/^\s*(?:\[[^\]\n]{1,80}\]\s*){0,3}/)||[''])[0];
+  const restStart=prefix.length,rest=s.slice(restStart);
+  const tokens=[...rest.matchAll(/\S+/g)];if(!tokens.length)return null;
+  const first=tokens[0][0],firstStart=restStart+tokens[0].index;
+  const noisy=t=>/[A-Za-z0-9#@|!"'’._-]/.test(t)&&!/^[가-힣]{2,}$/.test(t);
+  if(!noisy(first))return null;
+  let count=1;
+  if(tokens[1]){
+    const second=tokens[1][0],compactSecond=second.replace(/[^가-힣A-Za-z]/g,'');
+    if(OCR_WORLD_NAMES_V44.some(world=>compactSecond===world)||(/^[A-Za-z][A-Za-z'’._-]{1,29}$/.test(second)&&tokens[2]))count=2;
+  }
+  const last=tokens[count-1],end=restStart+last.index+last[0].length;
+  const candidate=s.slice(firstStart,end).trim();
+  if(!candidate||candidate.length>120)return null;
+  return {start:firstStart,end,candidate,kind:'leading-geometry'};
+}
+function speakerNeedsEnglishRetryV46(envelope,lexicon=[]){
+  if(!envelope?.candidate)return false;
+  const candidate=cleanOcrSpeakerV45(envelope.candidate),base=ocrCandidateWithoutWorldV45(candidate);if(!base)return false;
+  if(lexicon.length&&bestKnownSpeakerV43(candidate,lexicon))return false;
+  if(/^[가-힣][가-힣\s·ㆍ'’._-]{1,}$/.test(base))return false;
+  if(/^[A-Za-z][A-Za-z'’._ -]{2,}$/.test(base))return false;
+  const alpha=(base.match(/[A-Za-z]/g)||[]).length,digits=(base.match(/[0-9]/g)||[]).length,hangul=(base.match(/[가-힣]/g)||[]).length,punct=(base.match(/[#@|!"`~^]/g)||[]).length;
+  return alpha>0||digits>=2||punct>0||(digits>0&&hangul>0);
+}
+function worldFromOcrSpeakerV46(candidate=''){
+  const compact=String(candidate||'').replace(/\s+/g,'');
+  return OCR_WORLD_NAMES_V44.find(world=>compact.includes(world))||'';
+}
+function applySpeakerCorrectionV46(line,envelope,name){
+  if(!envelope||!name)return line;
+  const world=worldFromOcrSpeakerV46(envelope.candidate),replacement=`<${name}${world||''}>`;
+  const before=String(line||'').slice(0,envelope.start),after=String(line||'').slice(envelope.end);
+  const spacer=after&&!/^\s/.test(after)?' ':'';
+  return `${before}${replacement}${spacer}${after}`.replace(/>\s{2,}/,'> ');
+}
+function alignOcrLineByYV46(primary,englishRecords=[]){
+  if(!primary?.bbox||!englishRecords.length)return null;
+  const p=primary.bbox,ph=Math.max(1,p.y1-p.y0),pc=(p.y0+p.y1)/2;
+  let best=null,bestScore=-Infinity;
+  for(const rec of englishRecords){
+    const b=rec?.bbox;if(!b)continue;
+    const bh=Math.max(1,b.y1-b.y0),bc=(b.y0+b.y1)/2,overlap=Math.max(0,Math.min(p.y1,b.y1)-Math.max(p.y0,b.y0));
+    const overlapRatio=overlap/Math.min(ph,bh),centerPenalty=Math.abs(pc-bc)/Math.max(ph,bh),score=overlapRatio*2-centerPenalty;
+    if(score>bestScore){bestScore=score;best=rec}
+  }
+  return bestScore>.25?best:null;
+}
+function englishSpeakerFromLineV46(text,lexicon=[]){
+  const known=lexicon.length?bestLexiconFromEnglishTextV45(text,lexicon):null;
+  if(known)return {...known,name:known.source,known:true};
+  const raw=String(text||'').replace(/[<>\[\]{}()]/g,' ').replace(/[^A-Za-z0-9'’._ -]+/g,' ').replace(/\s+/g,' ').trim();
+  if(!raw)return null;
+  const tokens=raw.split(' ').filter(Boolean).map(t=>t.replace(/^[^A-Za-z]+|[^A-Za-z0-9'’._-]+$/g,'')).filter(Boolean);
+  const plausible=t=>/^[A-Za-z][A-Za-z0-9'’._-]{2,29}$/.test(t)&&(t.match(/[A-Za-z]/g)||[]).length/Math.max(1,t.length)>=.72;
+  for(let i=0;i<Math.min(tokens.length,6);i++){
+    if(!plausible(tokens[i]))continue;
+    let name=tokens[i];
+    if(i+1<tokens.length&&plausible(tokens[i+1])&&/^[A-Z]/.test(tokens[i])&&/^[A-Z]/.test(tokens[i+1]))name=`${tokens[i]} ${tokens[i+1]}`;
+    return {name,source:name,score:.8,known:false};
+  }
+  return null;
+}
+function retryRowsFromPrimaryV46(lines,records,lexicon=[]){
+  const rows=[];
+  lines.forEach((line,index)=>{
+    const envelope=speakerEnvelopeV46(line);if(!speakerNeedsEnglishRetryV46(envelope,lexicon))return;
+    rows.push({index,envelope,record:records[index]||null});
+  });
+  return rows;
+}
+async function retryEnglishSpeakersGeometryV46(imageSource,lines,primaryRecords,rows,lexicon=[]){
+  if(!rows.length)return {lines,corrections:[]};
+  const worker=await getOcrEnglishWorkerV45();
+  setProgress(80,'영문 닉네임 확인 중','닉네임 위치를 다시 읽고 있습니다.');
+  let result;try{result=await worker.recognize(imageSource,{}, {blocks:true})}catch{result=await worker.recognize(imageSource)}
+  const englishRecords=ocrLineRecordsV45(result?.data),fallback=String(result?.data?.text||'').split(/\r?\n/).filter(x=>x.trim());
+  const out=lines.slice(),corrections=[];
+  for(let n=0;n<rows.length;n++){
+    const row=rows[n],primary=row.record,aligned=primary?alignOcrLineByYV46(primary,englishRecords):null;
+    const engText=aligned?.text||(fallback.length===lines.length?fallback[row.index]:'');if(!engText)continue;
+    const hit=englishSpeakerFromLineV46(engText,lexicon);if(!hit?.name)continue;
+    const before=out[row.index],envelope=speakerEnvelopeV46(before)||row.envelope,after=applySpeakerCorrectionV46(before,envelope,hit.name);
+    if(after===before)continue;
+    out[row.index]=after;corrections.push({from:row.envelope.candidate,to:hit.name,score:hit.score,method:hit.known?'eng-known-geometry':'eng-geometry'});
+  }
+  return {lines:out,corrections};
+}
+
+recognizeScreenshotV42=async function(file){
+  pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+  setProgress(2,'OCR 준비 중','이미지 인식 기능을 불러오고 있습니다.');
+  try{
+    const [worker,image]=await Promise.all([getOcrWorkerV41(),prepareOcrImageV41(file)]);
+    let result;try{result=await worker.recognize(image,{}, {blocks:true})}catch{result=await worker.recognize(image)}
+    const records=ocrLineRecordsV45(result?.data),raw=(records.length?records.map(r=>r.text).join('\n'):String(result?.data?.text||''));
+    const confidence=Number(result?.data?.confidence||0),first=correctOcrSpeakerNamesV43(raw),lexicon=ocrSpeakerLexiconV43();
+    let finalText=first.text,corrections=first.corrections.slice(),normalizedLines=finalText.split(/\r?\n/);
+    const retryRows=retryRowsFromPrimaryV46(normalizedLines,records,lexicon);
+    if(retryRows.length){
+      const retried=await retryEnglishSpeakersGeometryV46(image,normalizedLines,records,retryRows,lexicon);
+      finalText=retried.lines.join('\n');corrections.push(...retried.corrections);
+    }
+    const parsed=setSourceReviewV42({kind:'ocr',fileName:file.name||'스크린샷',text:finalText,confidence,expanded:confidence<55});
+    if(sourceReviewV42){
+      const uniq=[],seen=new Set();for(const c of corrections){const k=`${c.from}\u0000${c.to}`;if(!seen.has(k)){seen.add(k);uniq.push(c)}}sourceReviewV42.corrections=uniq;
+    }
+    renderSourceReviewV42();
+    const count=parsed.messages?.length||0,fixes=sourceReviewV42?.corrections?.length||0;
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 이미지에서 찾았습니다.${fixes?` 닉네임 ${fixes}건을 보정했습니다.`:''}`);
+    else toast('대화를 자동으로 구분하지 못했습니다. 인식 결과를 수정해 주세요.','warn',4200);
+  }catch(error){
+    console.error(error);pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+    toast('스크린샷 OCR을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.','error',5200);
+  }finally{endProgress();if($('#logFile'))$('#logFile').value=''}
+};
+function setupV46Controls(){/* geometry-based OCR recovery has no extra UI */}
+
+
+
+/* ==== v47 open review on OCR/paste, collapse after register ==== */
+DEFAULT_STATE.version=47;
+
+handleGlobalPasteV42=function(e){
+  if(e.defaultPrevented||pasteIsEditingV42(e.target))return;
+  if(e.target instanceof Element&&e.target.closest('.modal-backdrop:not(.hidden)'))return;
+  const data=e.clipboardData;if(!data)return;
+  const items=[...(data.items||[])],imageItem=items.find(item=>item.kind==='file'&&/^image\//i.test(item.type||''));
+  if(imageItem){
+    const file=imageItem.getAsFile();if(!file)return;
+    e.preventDefault();e.stopImmediatePropagation();readLogFile(file);return;
+  }
+  const text=data.getData('text/plain');if(!text?.trim())return;
+  e.preventDefault();e.stopImmediatePropagation();
+  const parsed=setSourceReviewV42({kind:'clipboard',fileName:'붙여넣은 텍스트',text,expanded:true});
+  setTimeout(()=>$('#sourceReviewText')?.focus(),0);
+  toast(`${(parsed.messages?.length||0).toLocaleString('ko-KR')}개 메시지를 찾았습니다.`);
+};
+
+recognizeScreenshotV42=async function(file){
+  pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+  setProgress(2,'OCR 준비 중','이미지 인식 기능을 불러오고 있습니다.');
+  try{
+    const [worker,image]=await Promise.all([getOcrWorkerV41(),prepareOcrImageV41(file)]);
+    let result;try{result=await worker.recognize(image,{}, {blocks:true})}catch{result=await worker.recognize(image)}
+    const records=ocrLineRecordsV45(result?.data),raw=(records.length?records.map(r=>r.text).join('\n'):String(result?.data?.text||''));
+    const confidence=Number(result?.data?.confidence||0),first=correctOcrSpeakerNamesV43(raw),lexicon=ocrSpeakerLexiconV43();
+    let finalText=first.text,corrections=first.corrections.slice(),normalizedLines=finalText.split(/\r?\n/);
+    const retryRows=retryRowsFromPrimaryV46(normalizedLines,records,lexicon);
+    if(retryRows.length){
+      const retried=await retryEnglishSpeakersGeometryV46(image,normalizedLines,records,retryRows,lexicon);
+      finalText=retried.lines.join('\n');corrections.push(...retried.corrections);
+    }
+    const parsed=setSourceReviewV42({kind:'ocr',fileName:file.name||'스크린샷',text:finalText,confidence,expanded:true});
+    if(sourceReviewV42){
+      const uniq=[],seen=new Set();for(const c of corrections){const k=`${c.from}\u0000${c.to}`;if(!seen.has(k)){seen.add(k);uniq.push(c)}}sourceReviewV42.corrections=uniq;
+    }
+    renderSourceReviewV42();
+    setTimeout(()=>$('#sourceReviewText')?.focus(),0);
+    const count=parsed.messages?.length||0,fixes=sourceReviewV42?.corrections?.length||0;
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 이미지에서 찾았습니다.${fixes?` 닉네임 ${fixes}건을 보정했습니다.`:''}`);
+    else toast('대화를 자동으로 구분하지 못했습니다. 인식 결과를 수정해 주세요.','warn',4200);
+  }catch(error){
+    console.error(error);pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+    toast('스크린샷 OCR을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.','error',5200);
+  }finally{endProgress();if($('#logFile'))$('#logFile').value=''}
+};
+
+const v46CommitImportV47=commitImport;
+commitImport=async function(){
+  const completedReview=sourceReviewV42?{...sourceReviewV42}:null;
+  await v46CommitImportV47();
+  if(completedReview&&!pendingImport){
+    sourceReviewV42=completedReview;sourceReviewV42.expanded=false;ocrReviewV41=null;
+    renderSourceReviewV42();
+  }
+};
+function setupV47Controls(){/* review expansion is handled by input source */}
+
+
+
+/* ==== v48 source review auto-analysis ==== */
+DEFAULT_STATE.version=48;
+let sourceReviewAutoTimerV48=null;
+
+function sourceReviewAutoStatusV48(text='자동 반영'){
+  const status=$('#sourceReviewAutoStatus');
+  if(status)status.textContent=text;
+}
+function sourceReviewMetaTextV48(){
+  if(!sourceReviewV42)return '';
+  const value=$('#sourceReviewText')?.value ?? sourceReviewV42.text ?? '';
+  const meta=[];
+  if(sourceReviewV42.kind==='file'&&sourceReviewV42.fileName)meta.push(sourceReviewV42.fileName);
+  meta.push(`${sourceLineCountV42(value).toLocaleString('ko-KR')}줄`);
+  const confidence=Number(sourceReviewV42.confidence||0);
+  if(sourceReviewV42.kind==='ocr'&&Number.isFinite(confidence)&&confidence>0)meta.push(`${Math.round(confidence)}%`);
+  if(sourceReviewV42.kind==='ocr'&&sourceReviewV42.corrections?.length)meta.push(`닉네임 보정 ${sourceReviewV42.corrections.length.toLocaleString('ko-KR')}건`);
+  return meta.join(' · ');
+}
+function updateSourceReviewMetaV48(){
+  const span=$('#ocrReviewPanel .source-review-head span');
+  if(span)span.textContent=sourceReviewMetaTextV48();
+}
+function flushSourceReviewV48({rerender=false}={}){
+  if(!sourceReviewV42)return null;
+  const input=$('#sourceReviewText');
+  if(!input)return pendingImport;
+  const {text,parsed}=parseSourceReviewV42(sourceReviewV42,input.value);
+  sourceReviewV42.text=text;pendingImport=parsed;
+  renderImportTypeChecks();renderParseResult();
+  if(rerender)renderSourceReviewV42();
+  else{updateSourceReviewMetaV48();sourceReviewAutoStatusV48('자동 반영됨')}
+  return parsed;
+}
+function queueSourceReviewV48(){
+  clearTimeout(sourceReviewAutoTimerV48);
+  if(!sourceReviewV42)return;
+  const input=$('#sourceReviewText');
+  if(input)sourceReviewV42.text=input.value;
+  if(sourceReviewV42.corrections?.length)sourceReviewV42.corrections=[];
+  updateSourceReviewMetaV48();sourceReviewAutoStatusV48('자동 반영 중…');
+  sourceReviewAutoTimerV48=setTimeout(()=>{sourceReviewAutoTimerV48=null;flushSourceReviewV48()},550);
+}
+
+const v47RenderSourceReviewV48=renderSourceReviewV42;
+renderSourceReviewV42=function(){
+  v47RenderSourceReviewV48();
+  const panel=$('#ocrReviewPanel');if(!panel)return;
+  const actions=panel.querySelector('.ocr-review-actions');
+  if(actions)actions.innerHTML='<span class="source-review-auto-status" id="sourceReviewAutoStatus">수정 내용 자동 반영</span>';
+};
+
+const v47CommitImportV48=commitImport;
+commitImport=async function(){
+  if(sourceReviewAutoTimerV48){clearTimeout(sourceReviewAutoTimerV48);sourceReviewAutoTimerV48=null}
+  if(sourceReviewV42?.expanded&&$('#sourceReviewText'))flushSourceReviewV48();
+  return v47CommitImportV48();
+};
+
+function injectV48Styles(){
+  if(document.getElementById('v48-style'))return;
+  const style=document.createElement('style');style.id='v48-style';style.textContent=`
+.source-review-auto-status{display:block;width:100%;text-align:right;font-size:10px;font-weight:700;color:var(--muted);opacity:.68;padding:1px 2px 0}.ocr-review-actions:has(.source-review-auto-status){margin-top:5px;min-height:14px;justify-content:flex-end}
+`;
+  document.head.append(style);
+}
+function setupV48Controls(){
+  injectV48Styles();
+  const panel=ensureOcrReviewPanelV41();
+  panel?.addEventListener('input',e=>{if(e.target?.id==='sourceReviewText')queueSourceReviewV48()});
+  // Preserve the latest edit even when the review is collapsed before the debounce fires.
+  panel?.addEventListener('click',e=>{
+    if(e.target?.id!=='sourceReviewToggle'||!sourceReviewV42?.expanded)return;
+    const input=$('#sourceReviewText');if(input)sourceReviewV42.text=input.value;
+  },true);
+}
+
+
+
+/* ==== v49 right-side drag handle ==== */
+DEFAULT_STATE.version=49;
+rowTools=function(id){return `<div class="row-tools"><div class="row-direct-actions"><button class="row-direct-add" data-msg-add="${id}" title="아래에 추가">＋</button><button class="row-direct-edit" data-msg-edit="${id}" title="수정">수정</button></div><button class="row-menu-toggle" data-msg-menu="${id}" title="더 보기">⋯</button><button class="row-drag-handle row-drag-handle-right" data-msg-drag="${id}" draggable="true" title="끌어서 이동" aria-label="끌어서 이동"><span class="drag-grip-dots" aria-hidden="true"></span></button><div class="row-menu-actions"><button class="row-mobile-primary" data-msg-add="${id}" title="아래에 추가">＋</button><button class="row-mobile-primary" data-msg-edit="${id}" title="수정">✎</button><button data-msg-range="${id}" title="이전·이후 삭제">✂</button><button data-msg-delete="${id}" title="삭제">×</button></div></div>`};
+function injectV49Styles(){
+  if(document.getElementById('v49-style'))return;
+  const style=document.createElement('style');style.id='v49-style';style.textContent=`
+@media(min-width:901px){
+  .row-drag-handle-right{margin-left:2px!important;display:grid!important;place-items:center!important;position:relative}
+  .row-drag-handle-right:before{content:"";position:absolute;left:-2px;top:5px;bottom:5px;width:1px;background:var(--line);opacity:.85}
+  .drag-grip-dots{display:block;width:11px;height:15px;background-image:radial-gradient(circle,currentColor 1.25px,transparent 1.4px);background-size:5px 5px;background-position:0 0;opacity:.9;pointer-events:none}
+}
+@media(max-width:900px){.row-drag-handle-right{display:none!important}}
+`;
+  document.head.append(style);
+}
+function setupV49Controls(){injectV49Styles();renderMessages(false)}
+
+
+
+/* ==== v50 multipass per-line OCR refinement ==== */
+DEFAULT_STATE.version=50;
+
+function weirdnessScoreV50(text=''){
+  const s=String(text||'');
+  let score=0;
+  score += (s.match(/[A-Z]{3,}/g)||[]).length*0.25;
+  score += (s.match(/[0-9A-Za-z]{5,}["'`]/g)||[]).length*0.25;
+  score += (s.match(/[^\s\[\]<>:(){}.,!?~…\-_=+/*'"0-9A-Za-z가-힣]/g)||[]).length*0.015;
+  if(/[가-힣]/.test(s)&&/[A-Z]{4,}/.test(s))score += 0.2;
+  return score;
+}
+function normalizeOcrLineMaybeV50(text=''){
+  const raw=String(text||'').replace(/\r/g,'').trim();
+  if(!raw)return '';
+  try{return normalizeOcrTextV41(raw).split(/\n/).map(x=>x.trim()).filter(Boolean).join(' ')||raw}catch{return raw}
+}
+function scoreOcrLineCandidateV50(text='',confidence=0){
+  const candidate=normalizeOcrLineMaybeV50(text); if(!candidate)return -999;
+  let score=(Number(confidence)||0)/100;
+  try{if((parseLogHTML(candidate,'ocr-line')?.messages||[]).length)score+=2.2}catch{}
+  if(/[가-힣]/.test(candidate))score+=0.25;
+  if(/<[^>\n]{1,120}>/.test(candidate))score+=0.28;
+  if(/^\[\d{1,2}:\d{2}/.test(candidate))score+=0.22;
+  if(/^\[[^\]\n]{1,24}\]/.test(candidate))score+=0.12;
+  score-=weirdnessScoreV50(candidate);
+  return score;
+}
+async function cropOcrLineVariantV50(imageSource,bbox,variant='color'){
+  const img=await loadImageForOcrV45(imageSource);
+  const padX=8,padY=5;
+  const x0=Math.max(0,Math.floor((bbox?.x0||0)-padX));
+  const y0=Math.max(0,Math.floor((bbox?.y0||0)-padY));
+  const x1=Math.min(img.naturalWidth||img.width,Math.ceil((bbox?.x1||img.width)+padX));
+  const y1=Math.min(img.naturalHeight||img.height,Math.ceil((bbox?.y1||0)+padY));
+  const w=Math.max(1,x1-x0),h=Math.max(1,y1-y0);
+  const scale=h<24?5:h<36?4:h<54?3:2;
+  const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(w*scale));canvas.height=Math.max(1,Math.round(h*scale));
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,x0,y0,w,h,0,0,canvas.width,canvas.height);
+  if(variant!=='color'){
+    const imageData=ctx.getImageData(0,0,canvas.width,canvas.height),data=imageData.data;
+    let sum=0,count=0;
+    for(let i=0;i<data.length;i+=4){const l=0.2126*data[i]+0.7152*data[i+1]+0.0722*data[i+2];sum+=l;count++;}
+    const avg=count?sum/count:160,threshold=Math.max(115,Math.min(210,avg+18));
+    for(let i=0;i<data.length;i+=4){
+      const l=0.2126*data[i]+0.7152*data[i+1]+0.0722*data[i+2];
+      let v=l;
+      if(variant==='gray')v=Math.max(0,Math.min(255,(l-avg)*1.55+176));
+      else if(variant==='binary')v=l>=threshold?255:0;
+      data[i]=data[i+1]=data[i+2]=v;data[i+3]=255;
+    }
+    ctx.putImageData(imageData,0,0);
+  }
+  return canvas.toDataURL('image/png');
+}
+function extractSingleLineTextV50(data){
+  const records=ocrLineRecordsV45(data||{});
+  if(records.length)return records.map(r=>String(r.text||'').trim()).filter(Boolean).join(' ');
+  return String(data?.text||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean).join(' ');
+}
+async function refineLineTextsV50(imageSource,records=[]){
+  if(!records.length)return [];
+  const worker=await getOcrWorkerV41();
+  try{await worker.setParameters?.({tessedit_pageseg_mode:'7'})}catch{}
+  const refined=[];
+  const total=Math.min(records.length,40);
+  for(let i=0;i<records.length;i++){
+    const rec=records[i];
+    if(i<total)setProgress(52+Math.round((i/Math.max(1,total))*20),'세부 글자 확인 중',`${i+1} / ${records.length}`);
+    const baseText=normalizeOcrLineMaybeV50(rec?.text||'');
+    let best={text:baseText,score:scoreOcrLineCandidateV50(baseText,55),confidence:55,variant:'base'};
+    for(const variant of ['color','gray','binary']){
+      try{
+        const crop=await cropOcrLineVariantV50(imageSource,rec?.bbox,variant);
+        const res=await worker.recognize(crop);
+        const cand=normalizeOcrLineMaybeV50(extractSingleLineTextV50(res?.data));
+        const candScore=scoreOcrLineCandidateV50(cand,Number(res?.data?.confidence||0));
+        if(candScore>best.score+0.05||(best.variant==='base'&&candScore>best.score-0.05&&cand&&cand.length>=best.text.length-2))best={text:cand,score:candScore,confidence:Number(res?.data?.confidence||0),variant};
+      }catch(error){console.warn('line refine failed',variant,error)}
+    }
+    refined.push(best.text||baseText);
+  }
+  try{await worker.setParameters?.({tessedit_pageseg_mode:'6'})}catch{}
+  return refined;
+}
+function chooseOverallOcrTextV50(baseText='',refinedText=''){
+  const baseNorm=String(baseText||'').trim(),refNorm=String(refinedText||'').trim();
+  if(!refNorm)return baseNorm;
+  const baseParsed=(parseLogHTML(baseNorm,'ocr-base')?.messages||[]).length;
+  const refParsed=(parseLogHTML(refNorm,'ocr-refined')?.messages||[]).length;
+  if(refParsed>baseParsed)return refNorm;
+  if(refParsed<baseParsed)return baseNorm;
+  const baseWeird=weirdnessScoreV50(baseNorm),refWeird=weirdnessScoreV50(refNorm);
+  if(refWeird+.15<baseWeird)return refNorm;
+  if(baseWeird+.15<refWeird)return baseNorm;
+  const baseHangul=(baseNorm.match(/[가-힣]/g)||[]).length,refHangul=(refNorm.match(/[가-힣]/g)||[]).length;
+  if(refHangul>baseHangul+2)return refNorm;
+  return refNorm.length>=baseNorm.length*.92?refNorm:baseNorm;
+}
+
+recognizeScreenshotV42=async function(file){
+  pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+  setProgress(2,'OCR 준비 중','이미지 인식 기능을 불러오고 있습니다.');
+  try{
+    const [worker,image]=await Promise.all([getOcrWorkerV41(),prepareOcrImageV41(file)]);
+    let result;try{result=await worker.recognize(image,{}, {blocks:true})}catch{result=await worker.recognize(image)}
+    const records=ocrLineRecordsV45(result?.data),raw=(records.length?records.map(r=>r.text).join('\n'):String(result?.data?.text||''));
+    const confidence=Number(result?.data?.confidence||0),lexicon=ocrSpeakerLexiconV43();
+    let refinedRaw=raw;
+    if(records.length&&records.length<=40){
+      const refinedLines=await refineLineTextsV50(image,records);
+      refinedRaw=refinedLines.join('\n');
+    }
+    const chosenRaw=chooseOverallOcrTextV50(raw,refinedRaw);
+    const first=correctOcrSpeakerNamesV43(chosenRaw);
+    let finalText=first.text,corrections=first.corrections.slice(),normalizedLines=finalText.split(/\r?\n/);
+    const retryRows=retryRowsFromPrimaryV46(normalizedLines,records,lexicon);
+    if(retryRows.length){
+      const retried=await retryEnglishSpeakersGeometryV46(image,normalizedLines,records,retryRows,lexicon);
+      finalText=retried.lines.join('\n');corrections.push(...retried.corrections);
+    }
+    const parsed=setSourceReviewV42({kind:'ocr',fileName:file.name||'스크린샷',text:finalText,confidence,expanded:true});
+    if(sourceReviewV42){
+      const uniq=[],seen=new Set();for(const c of corrections){const k=`${c.from}\u0000${c.to}`;if(!seen.has(k)){seen.add(k);uniq.push(c)}}sourceReviewV42.corrections=uniq;
+    }
+    renderSourceReviewV42();
+    setTimeout(()=>$('#sourceReviewText')?.focus(),0);
+    const count=parsed.messages?.length||0,fixes=sourceReviewV42?.corrections?.length||0;
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 이미지에서 찾았습니다.${fixes?` 닉네임 ${fixes}건을 보정했습니다.`:''}${records.length&&records.length<=40?' 줄 단위 재인식을 적용했습니다.':''}`);
+    else toast('대화를 자동으로 구분하지 못했습니다. 인식 결과를 수정해 주세요.','warn',4200);
+  }catch(error){
+    console.error(error);pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+    toast('스크린샷 OCR을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.','error',5200);
+  }finally{endProgress();if($('#logFile'))$('#logFile').value=''}
+};
+function setupV50Controls(){/* multi-pass OCR refinement has no extra UI */}
+
+
+
+/* ==== v51 full-image posterized OCR pass ==== */
+DEFAULT_STATE.version=51;
+
+async function createFullImageOcrVariantV51(imageSource,variant='base'){
+  const img=await loadImageForOcrV45(imageSource);
+  const baseW=img.naturalWidth||img.width||1, baseH=img.naturalHeight||img.height||1;
+  const scale=(variant==='poster-strong'||variant==='poster-soft')?1.4:1;
+  const w=Math.max(1,Math.round(baseW*scale)), h=Math.max(1,Math.round(baseH*scale));
+  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+  ctx.drawImage(img,0,0,w,h);
+  if(variant!=='base'){
+    const imageData=ctx.getImageData(0,0,w,h),data=imageData.data;
+    let minL=255,maxL=0,sum=0,count=0;
+    for(let i=0;i<data.length;i+=4){
+      const l=0.2126*data[i]+0.7152*data[i+1]+0.0722*data[i+2];
+      if(l<minL)minL=l;if(l>maxL)maxL=l;sum+=l;count++;
+    }
+    const avg=count?sum/count:140;
+    const range=Math.max(1,maxL-minL);
+    for(let i=0;i<data.length;i+=4){
+      const l=0.2126*data[i]+0.7152*data[i+1]+0.0722*data[i+2];
+      let n=(l-minL)/range;
+      if(variant==='poster-soft'){
+        n=Math.pow(Math.max(0,Math.min(1,n)),0.75);
+        let v=n>0.88?255:n>0.72?228:n>0.52?174:n>0.34?110:22;
+        data[i]=data[i+1]=data[i+2]=v;data[i+3]=255;
+      }else if(variant==='poster-strong'){
+        let v=(l-avg)*2.8+168;
+        v=v>210?255:v>165?235:v>120?190:v>85?40:0;
+        data[i]=data[i+1]=data[i+2]=v;data[i+3]=255;
+      }
+    }
+    ctx.putImageData(imageData,0,0);
+  }
+  return canvas.toDataURL('image/png');
+}
+async function recognizeFullImageCandidateV51(worker,imageSource,label='base'){
+  let result;
+  try{result=await worker.recognize(imageSource,{}, {blocks:true})}catch{result=await worker.recognize(imageSource)}
+  const records=ocrLineRecordsV45(result?.data);
+  const raw=records.length?records.map(r=>String(r.text||'')).join('\n'):String(result?.data?.text||'');
+  const confidence=Number(result?.data?.confidence||0);
+  const parsedCount=(parseLogHTML(normalizeOcrTextV41(raw),'ocr-v51')?.messages||[]).length;
+  const weird=weirdnessScoreV50(raw);
+  const hangul=(raw.match(/[가-힣]/g)||[]).length;
+  const score=(confidence/100)+(parsedCount*1.9)+(records.length*0.06)+(hangul*0.002)-weird;
+  return {label,imageSource,result,records,raw,confidence,parsedCount,weird,hangul,score};
+}
+function chooseBestFullImageCandidateV51(candidates=[]){
+  if(!candidates.length)return null;
+  return [...candidates].sort((a,b)=>{
+    if(b.parsedCount!==a.parsedCount)return b.parsedCount-a.parsedCount;
+    if(Math.abs(b.score-a.score)>.12)return b.score-a.score;
+    if(a.weird!==b.weird)return a.weird-b.weird;
+    if(b.hangul!==a.hangul)return b.hangul-a.hangul;
+    return (b.confidence||0)-(a.confidence||0);
+  })[0];
+}
+recognizeScreenshotV42=async function(file){
+  pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+  setProgress(2,'OCR 준비 중','이미지 인식 기능을 불러오고 있습니다.');
+  try{
+    const [worker,baseImage]=await Promise.all([getOcrWorkerV41(),prepareOcrImageV41(file)]);
+    const variantOrder=['base','poster-soft','poster-strong'];
+    const variants={base:baseImage};
+    setProgress(12,'이미지 보정 중','OCR용 확대/포스터화 버전을 준비하고 있습니다.');
+    for(const key of variantOrder.slice(1))variants[key]=await createFullImageOcrVariantV51(baseImage,key);
+    const candidates=[];
+    for(let i=0;i<variantOrder.length;i++){
+      const label=variantOrder[i];
+      setProgress(18+Math.round((i/variantOrder.length)*20),'이미지 읽는 중',`${label==='base'?'원본 확대본':label==='poster-soft'?'포스터화 보정본':'강한 포스터화 보정본'}`);
+      candidates.push(await recognizeFullImageCandidateV51(worker,variants[label],label));
+    }
+    const bestFull=chooseBestFullImageCandidateV51(candidates) || candidates[0];
+    const records=bestFull.records||[];
+    const confidence=Number(bestFull.confidence||0),lexicon=ocrSpeakerLexiconV43();
+    let refinedRaw=bestFull.raw;
+    if(records.length&&records.length<=40){
+      const refinedLines=await refineLineTextsV50(bestFull.imageSource,records);
+      refinedRaw=refinedLines.join('\n');
+    }
+    const chosenRaw=chooseOverallOcrTextV50(bestFull.raw,refinedRaw);
+    const first=correctOcrSpeakerNamesV43(chosenRaw);
+    let finalText=first.text,corrections=first.corrections.slice(),normalizedLines=finalText.split(/\r?\n/);
+    const retryRows=retryRowsFromPrimaryV46(normalizedLines,records,lexicon);
+    if(retryRows.length){
+      const retried=await retryEnglishSpeakersGeometryV46(bestFull.imageSource,normalizedLines,records,retryRows,lexicon);
+      finalText=retried.lines.join('\n');corrections.push(...retried.corrections);
+    }
+    const parsed=setSourceReviewV42({kind:'ocr',fileName:file.name||'스크린샷',text:finalText,confidence,expanded:true});
+    if(sourceReviewV42){
+      const uniq=[],seen=new Set();
+      for(const c of corrections){const k=`${c.from}\u0000${c.to}`;if(!seen.has(k)){seen.add(k);uniq.push(c)}}
+      sourceReviewV42.corrections=uniq;
+    }
+    renderSourceReviewV42();
+    setTimeout(()=>$('#sourceReviewText')?.focus(),0);
+    const count=parsed.messages?.length||0,fixes=sourceReviewV42?.corrections?.length||0;
+    const variantLabel=bestFull.label==='base'?'원본 확대본':bestFull.label==='poster-soft'?'포스터화 보정본':'강한 포스터화 보정본';
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 이미지에서 찾았습니다.${fixes?` 닉네임 ${fixes}건을 보정했습니다.`:''} ${variantLabel}을 사용했습니다.`);
+    else toast('대화를 자동으로 구분하지 못했습니다. 인식 결과를 수정해 주세요.','warn',4200);
+  }catch(error){
+    console.error(error);pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+    toast('스크린샷 OCR을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.','error',5200);
+  }finally{endProgress();if($('#logFile'))$('#logFile').value=''}
+};
+function setupV51Controls(){/* automatic posterized OCR runs without extra UI */}
+
+
+
+/* ==== v52 exact RGB posterization matching the user's manual filter ==== */
+DEFAULT_STATE.version=52;
+
+async function loadBitmapOrImageV52(file){
+  try{if('createImageBitmap' in window)return await createImageBitmap(file)}catch{}
+  const url=await fileToDataURL(file);
+  return await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=url});
+}
+async function prepareExactRgbPosterV52(file){
+  const source=await loadBitmapOrImageV52(file);
+  const sw=source.width||source.naturalWidth||1,sh=source.height||source.naturalHeight||1;
+  // The manually successful sample was exactly: per-channel threshold at 128, then 3× bilinear upscale.
+  const poster=document.createElement('canvas');poster.width=sw;poster.height=sh;
+  const pctx=poster.getContext('2d',{willReadFrequently:true});pctx.drawImage(source,0,0,sw,sh);
+  const id=pctx.getImageData(0,0,sw,sh),d=id.data;
+  for(let i=0;i<d.length;i+=4){d[i]=d[i]>=128?255:0;d[i+1]=d[i+1]>=128?255:0;d[i+2]=d[i+2]>=128?255:0;d[i+3]=255}
+  pctx.putImageData(id,0,0);
+  const maxW=4200,maxH=2600;
+  const scale=Math.max(1,Math.min(3,maxW/sw,maxH/sh));
+  const tw=Math.max(1,Math.round(sw*scale)),th=Math.max(1,Math.round(sh*scale));
+  const out=document.createElement('canvas');out.width=tw;out.height=th;
+  const ctx=out.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(poster,0,0,sw,sh,0,0,tw,th);
+  try{source.close?.()}catch{}
+  return {image:out.toDataURL('image/png'),width:sw,height:sh,scale};
+}
+function chooseBestFullImageCandidateV52(candidates=[],preferPoster=false){
+  if(!candidates.length)return null;
+  const maxParsed=Math.max(...candidates.map(c=>c.parsedCount||0));
+  let pool=candidates.filter(c=>(c.parsedCount||0)===maxParsed);
+  if(preferPoster){
+    const poster=pool.find(c=>c.label==='rgb-poster');
+    if(poster){
+      const bestConf=Math.max(...pool.map(c=>Number(c.confidence||0)));
+      // OCR confidence is noisy; only reject the exact posterized pass when it is clearly much worse.
+      if(Number(poster.confidence||0)>=bestConf-18 && poster.weird<=Math.min(...pool.map(c=>c.weird))+0.55)return poster;
+    }
+  }
+  return [...pool].sort((a,b)=>{
+    if(Math.abs(b.score-a.score)>.12)return b.score-a.score;
+    if(a.weird!==b.weird)return a.weird-b.weird;
+    if(b.hangul!==a.hangul)return b.hangul-a.hangul;
+    return (b.confidence||0)-(a.confidence||0);
+  })[0];
+}
+
+recognizeScreenshotV42=async function(file){
+  pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+  setProgress(2,'OCR 준비 중','이미지 인식 기능을 불러오고 있습니다.');
+  try{
+    const [worker,baseImage,posterInfo]=await Promise.all([getOcrWorkerV41(),prepareOcrImageV41(file),prepareExactRgbPosterV52(file)]);
+    const isSmall=posterInfo.width<=1000&&posterInfo.height<=600;
+    const variants=[];
+    setProgress(12,'이미지 보정 중','원본과 컬러 포스터화 버전을 준비하고 있습니다.');
+    variants.push({label:'base',image:baseImage});
+    variants.push({label:'rgb-poster',image:posterInfo.image});
+    // Keep the softer grayscale fallback, but do not let it replace the exact manual-style pass merely because of a tiny score difference.
+    if(isSmall){
+      try{variants.push({label:'poster-soft',image:await createFullImageOcrVariantV51(baseImage,'poster-soft')})}catch{}
+    }
+    const candidates=[];
+    for(let i=0;i<variants.length;i++){
+      const v=variants[i];
+      setProgress(18+Math.round((i/Math.max(1,variants.length))*25),'이미지 읽는 중',v.label==='base'?'원본 확대본':v.label==='rgb-poster'?'컬러 포스터화 보정본':'보조 보정본');
+      candidates.push(await recognizeFullImageCandidateV51(worker,v.image,v.label));
+    }
+    const bestFull=chooseBestFullImageCandidateV52(candidates,isSmall)||candidates[0];
+    const records=bestFull.records||[],confidence=Number(bestFull.confidence||0),lexicon=ocrSpeakerLexiconV43();
+    let chosenRaw=bestFull.raw;
+    // The exact RGB-posterized image already matches the manually successful preprocessing.
+    // Avoid the v50 grayscale/binary per-line rewrite on this pass; it can reintroduce Latin garbage into Korean body text.
+    if(bestFull.label!=='rgb-poster'&&records.length&&records.length<=40){
+      const refinedLines=await refineLineTextsV50(bestFull.imageSource,records);
+      chosenRaw=chooseOverallOcrTextV50(bestFull.raw,refinedLines.join('\n'));
+    }
+    const first=correctOcrSpeakerNamesV43(chosenRaw);
+    let finalText=first.text,corrections=first.corrections.slice(),normalizedLines=finalText.split(/\r?\n/);
+    const retryRows=retryRowsFromPrimaryV46(normalizedLines,records,lexicon);
+    if(retryRows.length){
+      const retried=await retryEnglishSpeakersGeometryV46(bestFull.imageSource,normalizedLines,records,retryRows,lexicon);
+      finalText=retried.lines.join('\n');corrections.push(...retried.corrections);
+    }
+    const parsed=setSourceReviewV42({kind:'ocr',fileName:file.name||'스크린샷',text:finalText,confidence,expanded:true});
+    if(sourceReviewV42){
+      const uniq=[],seen=new Set();for(const c of corrections){const k=`${c.from}\u0000${c.to}`;if(!seen.has(k)){seen.add(k);uniq.push(c)}}sourceReviewV42.corrections=uniq;
+    }
+    renderSourceReviewV42();setTimeout(()=>$('#sourceReviewText')?.focus(),0);
+    const count=parsed.messages?.length||0,fixes=sourceReviewV42?.corrections?.length||0;
+    const label=bestFull.label==='rgb-poster'?'컬러 포스터화 보정본':bestFull.label==='base'?'원본 확대본':'보조 보정본';
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 이미지에서 찾았습니다.${fixes?` 닉네임 ${fixes}건을 보정했습니다.`:''} ${label}을 사용했습니다.`);
+    else toast('대화를 자동으로 구분하지 못했습니다. 인식 결과를 수정해 주세요.','warn',4200);
+  }catch(error){
+    console.error(error);pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+    toast('스크린샷 OCR을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.','error',5200);
+  }finally{endProgress();if($('#logFile'))$('#logFile').value=''}
+};
+function setupV52Controls(){/* exact manual-style posterization runs automatically */}
+
+
+
+/* ==== v53 OCR line de-duplication ==== */
+DEFAULT_STATE.version=53;
+
+function ocrRecordOverlapV53(a,b){
+  const A=a?.bbox,B=b?.bbox;if(!A||!B)return false;
+  const ah=Math.max(1,A.y1-A.y0),bh=Math.max(1,B.y1-B.y0),aw=Math.max(1,A.x1-A.x0),bw=Math.max(1,B.x1-B.x0);
+  const ac=(A.y0+A.y1)/2,bc=(B.y0+B.y1)/2;
+  const yClose=Math.abs(ac-bc)<=Math.max(2,Math.min(ah,bh)*.38);
+  const xOverlap=Math.max(0,Math.min(A.x1,B.x1)-Math.max(A.x0,B.x0));
+  const xRatio=xOverlap/Math.max(1,Math.min(aw,bw));
+  return yClose&&xRatio>=.45;
+}
+function ocrRecordQualityV53(rec){
+  const text=String(rec?.text||'').trim(),conf=Number(rec?.confidence||0);
+  let q=conf/100+Math.min(.35,text.length/180);
+  if(/^\s*\[?\d{1,2}:\d{2}/.test(text))q+=.18;
+  if(/<[^>]+>/.test(text))q+=.12;
+  q-=weirdnessScoreV50(text)*.25;
+  return q;
+}
+ocrLineRecordsV45=function(data){
+  const raw=[];
+  const add=line=>{
+    const text=String(line?.text||'').trim(),bbox=line?.bbox;
+    if(!text||!bbox||![bbox.x0,bbox.y0,bbox.x1,bbox.y1].every(Number.isFinite))return;
+    raw.push({text,bbox:{x0:bbox.x0,y0:bbox.y0,x1:bbox.x1,y1:bbox.y1},confidence:Number(line?.confidence||0)});
+  };
+  if(Array.isArray(data?.lines))data.lines.forEach(add);
+  const walk=node=>{
+    if(!node||typeof node!=='object')return;
+    if(Array.isArray(node.lines))node.lines.forEach(add);
+    if(Array.isArray(node.paragraphs))node.paragraphs.forEach(walk);
+    if(Array.isArray(node.blocks))node.blocks.forEach(walk);
+  };
+  if(!raw.length&&Array.isArray(data?.blocks))data.blocks.forEach(walk);
+  raw.sort((a,b)=>a.bbox.y0-b.bbox.y0||a.bbox.x0-b.bbox.x0);
+  const out=[];
+  for(const rec of raw){
+    const idx=out.findIndex(prev=>ocrRecordOverlapV53(prev,rec));
+    if(idx<0){out.push(rec);continue}
+    if(ocrRecordQualityV53(rec)>ocrRecordQualityV53(out[idx]))out[idx]=rec;
+  }
+  return out.sort((a,b)=>a.bbox.y0-b.bbox.y0||a.bbox.x0-b.bbox.x0);
+};
+recognizeFullImageCandidateV51=async function(worker,imageSource,label='base'){
+  let result;
+  try{result=await worker.recognize(imageSource,{}, {blocks:true})}catch{result=await worker.recognize(imageSource)}
+  const records=ocrLineRecordsV45(result?.data);
+  // Tesseract's final text is authoritative. Line records are retained only for geometry-based correction.
+  // Reconstructing the text from hierarchical line records can duplicate the same visual row.
+  const finalText=String(result?.data?.text||'').trim();
+  const raw=finalText||records.map(r=>String(r.text||'')).join('\n');
+  const confidence=Number(result?.data?.confidence||0);
+  const parsedCount=(parseLogHTML(normalizeOcrTextV41(raw),'ocr-v53')?.messages||[]).length;
+  const weird=weirdnessScoreV50(raw);
+  const hangul=(raw.match(/[가-힣]/g)||[]).length;
+  const score=(confidence/100)+(parsedCount*1.9)+(records.length*.06)+(hangul*.002)-weird;
+  return {label,imageSource,result,records,raw,confidence,parsedCount,weird,hangul,score};
+};
+extractSingleLineTextV50=function(data){
+  const finalText=String(data?.text||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean).join(' ');
+  if(finalText)return finalText;
+  const records=ocrLineRecordsV45(data||{});
+  return records.map(r=>String(r.text||'').trim()).filter(Boolean).join(' ');
+};
+function setupV53Controls(){/* OCR text/geometry separation has no extra UI */}
+
+
+
+/* ==== v54 PaddleOCR PP-OCRv5 Korean experiment ==== */
+DEFAULT_STATE.version=54;
+let paddleOcrPromiseV54=null;
+const PADDLE_OCR_ESM_V54='https://esm.sh/@paddleocr/paddleocr-js@0.4.2?bundle';
+
+async function getPaddleOcrV54(){
+  if(paddleOcrPromiseV54)return paddleOcrPromiseV54;
+  paddleOcrPromiseV54=(async()=>{
+    setProgress(4,'PaddleOCR 준비 중','처음 사용할 때 한국어 OCR 모델을 내려받습니다.');
+    const mod=await import(PADDLE_OCR_ESM_V54);
+    const PaddleOCR=mod?.PaddleOCR;
+    if(!PaddleOCR?.create)throw new Error('PaddleOCR 모듈을 불러오지 못했습니다.');
+    return await PaddleOCR.create({
+      textDetectionModelName:'PP-OCRv5_mobile_det',
+      textRecognitionModelName:'korean_PP-OCRv5_mobile_rec',
+      textDetectionBatchSize:1,
+      textRecognitionBatchSize:8,
+      worker:false,
+      ortOptions:{
+        backend:'wasm',
+        wasmPaths:'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/',
+        numThreads:1,
+        simd:true
+      }
+    });
+  })().catch(error=>{paddleOcrPromiseV54=null;throw error});
+  return paddleOcrPromiseV54;
+}
+function paddlePolyPointsV54(poly){
+  if(!poly)return [];
+  if(Array.isArray(poly)){
+    if(poly.length&&Array.isArray(poly[0]))return poly.map(p=>({x:Number(p?.[0]),y:Number(p?.[1])})).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
+    if(poly.length&&typeof poly[0]==='object')return poly.map(p=>({x:Number(p?.x??p?.[0]),y:Number(p?.y??p?.[1])})).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
+    if(poly.length>=4&&poly.every(Number.isFinite)){
+      const out=[];for(let i=0;i+1<poly.length;i+=2)out.push({x:Number(poly[i]),y:Number(poly[i+1])});return out;
+    }
+  }
+  return [];
+}
+function paddleItemRecordV54(item){
+  const text=String(item?.text||'').trim();if(!text)return null;
+  const pts=paddlePolyPointsV54(item?.poly||item?.box||item?.points||item?.polygon);
+  let bbox=null;
+  if(pts.length){
+    const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);bbox={x0:Math.min(...xs),y0:Math.min(...ys),x1:Math.max(...xs),y1:Math.max(...ys)};
+  }
+  return {text,score:Number(item?.score??item?.confidence??0),bbox};
+}
+function mergePaddleItemsIntoLinesV54(items=[]){
+  const records=(items||[]).map(paddleItemRecordV54).filter(Boolean);
+  const boxed=records.filter(r=>r.bbox),unboxed=records.filter(r=>!r.bbox);
+  boxed.sort((a,b)=>((a.bbox.y0+a.bbox.y1)-(b.bbox.y0+b.bbox.y1))||a.bbox.x0-b.bbox.x0);
+  const groups=[];
+  for(const rec of boxed){
+    const b=rec.bbox,h=Math.max(1,b.y1-b.y0),cy=(b.y0+b.y1)/2;
+    let best=null,bestDist=Infinity;
+    for(const g of groups){
+      const dist=Math.abs(cy-g.cy),tol=Math.max(4,Math.min(h,g.h)*.58);
+      if(dist<=tol&&dist<bestDist){best=g;bestDist=dist}
+    }
+    if(!best){best={items:[],cy,h};groups.push(best)}
+    best.items.push(rec);
+    const all=best.items,bbox={x0:Math.min(...all.map(x=>x.bbox.x0)),y0:Math.min(...all.map(x=>x.bbox.y0)),x1:Math.max(...all.map(x=>x.bbox.x1)),y1:Math.max(...all.map(x=>x.bbox.y1))};
+    best.cy=(bbox.y0+bbox.y1)/2;best.h=Math.max(1,bbox.y1-bbox.y0);best.bbox=bbox;
+  }
+  groups.sort((a,b)=>a.cy-b.cy);
+  const lines=groups.map(g=>{
+    g.items.sort((a,b)=>a.bbox.x0-b.bbox.x0);
+    const text=g.items.map(x=>x.text).join(' ').replace(/\s+([,.:;!?…])/g,'$1').trim();
+    const score=g.items.reduce((s,x)=>s+(Number(x.score)||0),0)/Math.max(1,g.items.length);
+    return {text,score,bbox:g.bbox};
+  });
+  for(const rec of unboxed)lines.push({text:rec.text,score:rec.score,bbox:null});
+  return lines;
+}
+function paddleResultTextV54(result){
+  const lines=mergePaddleItemsIntoLinesV54(result?.items||[]);
+  return {lines,raw:lines.map(x=>x.text).filter(Boolean).join('\n')};
+}
+function scorePaddleCandidateV54(candidate){
+  const normalized=normalizeOcrTextV41(candidate.raw||'');
+  let parsedCount=0;try{parsedCount=(parseLogHTML(normalized,'paddle-v54')?.messages||[]).length}catch{}
+  const weird=weirdnessScoreV50(candidate.raw||''),hangul=((candidate.raw||'').match(/[가-힣]/g)||[]).length;
+  const scores=(candidate.lines||[]).map(x=>Number(x.score||0)).filter(Number.isFinite);
+  const confidence=scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:0;
+  const score=(confidence)+(parsedCount*1.95)+(hangul*.002)-weird;
+  return {...candidate,normalized,parsedCount,weird,hangul,confidence,score};
+}
+function choosePaddleCandidateV54(candidates=[]){
+  if(!candidates.length)return null;
+  const maxParsed=Math.max(...candidates.map(c=>c.parsedCount||0));
+  const pool=candidates.filter(c=>(c.parsedCount||0)===maxParsed);
+  return [...pool].sort((a,b)=>{
+    if(Math.abs((b.score||0)-(a.score||0))>.08)return (b.score||0)-(a.score||0);
+    if((a.weird||0)!==(b.weird||0))return (a.weird||0)-(b.weird||0);
+    if((b.hangul||0)!==(a.hangul||0))return (b.hangul||0)-(a.hangul||0);
+    return (b.confidence||0)-(a.confidence||0);
+  })[0];
+}
+async function dataUrlToBlobV54(url){
+  const res=await fetch(url);return await res.blob();
+}
+async function runPaddleCandidateV54(ocr,imageSource,label){
+  const blob=typeof imageSource==='string'?await dataUrlToBlobV54(imageSource):imageSource;
+  const results=await ocr.predict(blob,{
+    textDetLimitSideLen:1600,
+    textDetLimitType:'max',
+    textDetBoxThresh:0.45,
+    textDetUnclipRatio:1.35,
+    textRecScoreThresh:0.2
+  });
+  const result=Array.isArray(results)?results[0]:results;
+  return scorePaddleCandidateV54({label,result,...paddleResultTextV54(result)});
+}
+
+const v53RecognizeScreenshotV54=recognizeScreenshotV42;
+recognizeScreenshotV42=async function(file){
+  pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+  setProgress(2,'PaddleOCR 준비 중','한국어·영어 전용 OCR을 불러오고 있습니다.');
+  try{
+    const [ocr,baseImage,posterInfo]=await Promise.all([getPaddleOcrV54(),prepareOcrImageV41(file),prepareExactRgbPosterV52(file)]);
+    const variants=[{label:'paddle-base',image:baseImage},{label:'paddle-rgb',image:posterInfo.image}];
+    const candidates=[];
+    for(let i=0;i<variants.length;i++){
+      const v=variants[i];
+      setProgress(38+Math.round((i/variants.length)*42),'PaddleOCR로 읽는 중',v.label==='paddle-rgb'?'컬러 포스터화 보정본':'원본 확대본');
+      candidates.push(await runPaddleCandidateV54(ocr,v.image,v.label));
+    }
+    const best=choosePaddleCandidateV54(candidates)||candidates[0];
+    if(!best?.raw?.trim())throw new Error('PaddleOCR가 텍스트를 찾지 못했습니다.');
+    const corrected=correctOcrSpeakerNamesV43(best.raw);
+    const finalText=corrected.text;
+    const confidence=Math.max(0,Math.min(100,Number(best.confidence||0)*100));
+    const parsed=setSourceReviewV42({kind:'ocr',fileName:file.name||'스크린샷',text:finalText,confidence,expanded:true});
+    if(sourceReviewV42){
+      sourceReviewV42.corrections=corrected.corrections||[];
+      sourceReviewV42.ocrEngine='PaddleOCR';
+      sourceReviewV42.ocrVariant=best.label==='paddle-rgb'?'컬러 포스터화':'원본 확대';
+    }
+    renderSourceReviewV42();setTimeout(()=>$('#sourceReviewText')?.focus(),0);
+    const count=parsed.messages?.length||0,fixes=sourceReviewV42?.corrections?.length||0;
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 PaddleOCR로 찾았습니다.${fixes?` 닉네임 ${fixes}건을 보정했습니다.`:''}`);
+    else toast('PaddleOCR 결과를 확인하고 필요한 부분을 수정해 주세요.','warn',4200);
+    endProgress();if($('#logFile'))$('#logFile').value='';
+  }catch(error){
+    console.warn('PaddleOCR failed; falling back to Tesseract.',error);
+    endProgress();
+    toast('PaddleOCR을 사용할 수 없어 기존 OCR로 다시 시도합니다.','warn',3600);
+    await v53RecognizeScreenshotV54(file);
+    if(sourceReviewV42?.kind==='ocr'){sourceReviewV42.ocrEngine='Tesseract';sourceReviewV42.ocrVariant='자동 폴백';renderSourceReviewV42()}
+    return;
+  }
+};
+
+const v53SourceReviewMetaTextV54=sourceReviewMetaTextV48;
+sourceReviewMetaTextV48=function(){
+  const base=v53SourceReviewMetaTextV54();
+  if(sourceReviewV42?.kind!=='ocr'||!sourceReviewV42?.ocrEngine)return base;
+  const extra=[sourceReviewV42.ocrEngine,sourceReviewV42.ocrVariant].filter(Boolean).join(' · ');
+  return [base,extra].filter(Boolean).join(' · ');
+};
+function setupV54Controls(){/* PaddleOCR is lazy-loaded only when screenshot OCR is used. */}
+
+
+
+/* ==== v55 PaddleOCR Korean language route + staged diagnostics ==== */
+DEFAULT_STATE.version=55;
+const PADDLE_MODULE_SOURCES_V55=[
+  'https://cdn.jsdelivr.net/npm/@paddleocr/paddleocr-js@0.4.2/+esm',
+  'https://esm.sh/@paddleocr/paddleocr-js@0.4.2?bundle'
+];
+let paddleStatusV55={stage:'대기',detail:'',source:'',summary:null};
+
+function setPaddleStatusV55(stage,detail='',extra={}){
+  paddleStatusV55={...paddleStatusV55,stage,detail,...extra};
+}
+function paddleFailureLabelV55(){
+  const stage=String(paddleStatusV55?.stage||'초기화');
+  if(stage.includes('모듈'))return '모듈 로딩';
+  if(stage.includes('모델'))return '한국어 모델 초기화';
+  if(stage.includes('WASM'))return 'WASM 초기화';
+  if(stage.includes('추론'))return '이미지 추론';
+  return stage||'초기화';
+}
+function shortPaddleErrorV55(error){
+  const text=String(error?.message||error||'알 수 없는 오류').replace(/\s+/g,' ').trim();
+  return text.length>150?text.slice(0,147)+'…':text;
+}
+async function importPaddleModuleV55(){
+  let lastError=null;
+  for(let i=0;i<PADDLE_MODULE_SOURCES_V55.length;i++){
+    const url=PADDLE_MODULE_SOURCES_V55[i];
+    setPaddleStatusV55('모듈 로딩',i===0?'jsDelivr에서 PaddleOCR을 불러오는 중':'보조 CDN에서 PaddleOCR을 불러오는 중',{source:url});
+    setProgress(4+i*2,'PaddleOCR 모듈 로딩 중',i===0?'jsDelivr':'보조 CDN');
+    try{
+      const mod=await import(url);
+      if(mod?.PaddleOCR?.create)return mod;
+      throw new Error('PaddleOCR.create를 찾지 못했습니다.');
+    }catch(error){lastError=error;console.warn('PaddleOCR module source failed:',url,error)}
+  }
+  throw lastError||new Error('PaddleOCR 모듈을 불러오지 못했습니다.');
+}
+getPaddleOcrV54=async function(){
+  if(paddleOcrPromiseV54)return paddleOcrPromiseV54;
+  paddleOcrPromiseV54=(async()=>{
+    const mod=await importPaddleModuleV55(),PaddleOCR=mod.PaddleOCR;
+    setPaddleStatusV55('한국어 모델 초기화','PP-OCRv5 한국어 모델을 내려받고 있습니다.');
+    setProgress(9,'PaddleOCR 한국어 모델 준비 중','처음 사용할 때 모델 다운로드로 시간이 걸릴 수 있습니다.');
+    let ocr;
+    try{
+      // Official PP-OCRv5 language routing selects korean_PP-OCRv5_mobile_rec.
+      ocr=await PaddleOCR.create({
+        lang:'korean',
+        ocrVersion:'PP-OCRv5',
+        textDetectionBatchSize:1,
+        textRecognitionBatchSize:8,
+        worker:false,
+        ortOptions:{
+          backend:'wasm',
+          wasmPaths:'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/',
+          numThreads:1,
+          simd:true
+        }
+      });
+    }catch(error){
+      const msg=shortPaddleErrorV55(error);
+      if(/wasm|onnxruntime|ort|webassembly/i.test(msg))setPaddleStatusV55('WASM 초기화',msg);
+      else setPaddleStatusV55('한국어 모델 초기화',msg);
+      throw error;
+    }
+    let summary=null;
+    try{summary=ocr?.getInitializationSummary?.()||null}catch{}
+    setPaddleStatusV55('준비 완료','PP-OCRv5 한국어·영어 모델',{summary});
+    console.info('PaddleOCR initialized',summary||'korean / PP-OCRv5');
+    return ocr;
+  })().catch(error=>{paddleOcrPromiseV54=null;throw error});
+  return paddleOcrPromiseV54;
+};
+
+recognizeScreenshotV42=async function(file){
+  pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+  setPaddleStatusV55('모듈 로딩','');
+  setProgress(2,'PaddleOCR 준비 중','한국어·영어 OCR을 불러오고 있습니다.');
+  try{
+    const [ocr,baseImage,posterInfo]=await Promise.all([getPaddleOcrV54(),prepareOcrImageV41(file),prepareExactRgbPosterV52(file)]);
+    const variants=[{label:'paddle-base',image:baseImage},{label:'paddle-rgb',image:posterInfo.image}];
+    const candidates=[];
+    setPaddleStatusV55('이미지 추론','PaddleOCR로 스크린샷을 읽고 있습니다.');
+    for(let i=0;i<variants.length;i++){
+      const v=variants[i];
+      setProgress(38+Math.round((i/variants.length)*42),'PaddleOCR로 읽는 중',v.label==='paddle-rgb'?'컬러 포스터화 보정본':'원본 확대본');
+      candidates.push(await runPaddleCandidateV54(ocr,v.image,v.label));
+    }
+    const best=choosePaddleCandidateV54(candidates)||candidates[0];
+    if(!best?.raw?.trim())throw new Error('PaddleOCR가 텍스트를 찾지 못했습니다.');
+    const corrected=correctOcrSpeakerNamesV43(best.raw),finalText=corrected.text;
+    const confidence=Math.max(0,Math.min(100,Number(best.confidence||0)*100));
+    const parsed=setSourceReviewV42({kind:'ocr',fileName:file.name||'스크린샷',text:finalText,confidence,expanded:true});
+    if(sourceReviewV42){
+      sourceReviewV42.corrections=corrected.corrections||[];
+      sourceReviewV42.ocrEngine='PaddleOCR';
+      sourceReviewV42.ocrVariant=best.label==='paddle-rgb'?'컬러 포스터화':'원본 확대';
+      sourceReviewV42.paddleFailureStage='';
+    }
+    renderSourceReviewV42();setTimeout(()=>$('#sourceReviewText')?.focus(),0);
+    const count=parsed.messages?.length||0,fixes=sourceReviewV42?.corrections?.length||0;
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 PaddleOCR로 찾았습니다.${fixes?` 닉네임 ${fixes}건을 보정했습니다.`:''}`);
+    else toast('PaddleOCR 결과를 확인하고 필요한 부분을 수정해 주세요.','warn',4200);
+    endProgress();if($('#logFile'))$('#logFile').value='';
+  }catch(error){
+    const stage=paddleFailureLabelV55(),detail=shortPaddleErrorV55(error);
+    console.warn(`PaddleOCR ${stage} failed; falling back to Tesseract.`,error);
+    endProgress();
+    toast(`PaddleOCR ${stage} 실패 · 기존 OCR로 다시 시도합니다.`, 'warn', 4600);
+    await v53RecognizeScreenshotV54(file);
+    if(sourceReviewV42?.kind==='ocr'){
+      sourceReviewV42.ocrEngine='Tesseract';sourceReviewV42.ocrVariant='자동 폴백';
+      sourceReviewV42.paddleFailureStage=stage;sourceReviewV42.paddleFailureDetail=detail;
+      renderSourceReviewV42();
+    }
+    return;
+  }
+};
+
+const v54SourceReviewMetaTextV55=sourceReviewMetaTextV48;
+sourceReviewMetaTextV48=function(){
+  let base=v54SourceReviewMetaTextV55();
+  if(sourceReviewV42?.kind==='ocr'&&sourceReviewV42?.paddleFailureStage){
+    base=[base,`Paddle ${sourceReviewV42.paddleFailureStage} 실패`].filter(Boolean).join(' · ');
+  }
+  return base;
+};
+function injectV55Styles(){
+  if(document.getElementById('v55-style'))return;
+  const style=document.createElement('style');style.id='v55-style';style.textContent=`
+.paddle-failure-note{margin-top:7px;font-size:10px;line-height:1.45;color:var(--muted);opacity:.78;word-break:break-word}
+`;
+  document.head.append(style);
+}
+const v54RenderSourceReviewV55=renderSourceReviewV42;
+renderSourceReviewV42=function(){
+  v54RenderSourceReviewV55();
+  const panel=$('#ocrReviewPanel');
+  if(!panel||sourceReviewV42?.kind!=='ocr'||!sourceReviewV42?.paddleFailureStage||!sourceReviewV42?.paddleFailureDetail)return;
+  if(panel.querySelector('.paddle-failure-note'))return;
+  const note=document.createElement('div');note.className='paddle-failure-note';
+  note.textContent=`PaddleOCR ${sourceReviewV42.paddleFailureStage}: ${sourceReviewV42.paddleFailureDetail}`;
+  panel.append(note);
+};
+function setupV55Controls(){injectV55Styles()}
+
+
+
+/* ==== v56 PaddleOCR pinned ORT runtime + exact WASM assets ==== */
+DEFAULT_STATE.version=56;
+const PADDLE_OCR_ESM_PINNED_V56='https://esm.sh/@paddleocr/paddleocr-js@0.4.2?bundle&deps=onnxruntime-web@1.22.0';
+const ORT_WASM_JSEP_V56={
+  mjs:'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort-wasm-simd-threaded.jsep.mjs',
+  wasm:'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort-wasm-simd-threaded.jsep.wasm'
+};
+const ORT_WASM_PLAIN_V56={
+  mjs:'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort-wasm-simd-threaded.mjs',
+  wasm:'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort-wasm-simd-threaded.wasm'
+};
+
+async function importPaddleModuleV56(){
+  setPaddleStatusV55('모듈 로딩','ORT 1.22.0 고정 빌드를 불러오는 중',{source:PADDLE_OCR_ESM_PINNED_V56});
+  setProgress(4,'PaddleOCR 모듈 로딩 중','ONNX Runtime 1.22.0 고정');
+  const mod=await import(PADDLE_OCR_ESM_PINNED_V56);
+  if(!mod?.PaddleOCR?.create)throw new Error('PaddleOCR.create를 찾지 못했습니다.');
+  return mod;
+}
+async function createPinnedPaddleV56(PaddleOCR,wasmPaths,label){
+  setPaddleStatusV55('WASM 초기화',`${label} 런타임을 준비하고 있습니다.`);
+  setProgress(10,'PaddleOCR WASM 준비 중',label);
+  return await PaddleOCR.create({
+    lang:'korean',
+    ocrVersion:'PP-OCRv5',
+    textDetectionBatchSize:1,
+    textRecognitionBatchSize:8,
+    worker:false,
+    ortOptions:{
+      backend:'wasm',
+      wasmPaths,
+      numThreads:1,
+      simd:true,
+      proxy:false,
+      initTimeout:60000
+    }
+  });
+}
+getPaddleOcrV54=async function(){
+  if(paddleOcrPromiseV54)return paddleOcrPromiseV54;
+  paddleOcrPromiseV54=(async()=>{
+    const mod=await importPaddleModuleV56(),PaddleOCR=mod.PaddleOCR;
+    let lastError=null;
+    for(const attempt of [
+      {label:'ORT 1.22 JSEP',paths:ORT_WASM_JSEP_V56},
+      {label:'ORT 1.22 기본 WASM',paths:ORT_WASM_PLAIN_V56}
+    ]){
+      try{
+        const ocr=await createPinnedPaddleV56(PaddleOCR,attempt.paths,attempt.label);
+        let summary=null;try{summary=ocr?.getInitializationSummary?.()||null}catch{}
+        setPaddleStatusV55('준비 완료',`PP-OCRv5 한국어·영어 · ${attempt.label}`,{summary,wasmMode:attempt.label});
+        console.info('PaddleOCR initialized',attempt.label,summary||'');
+        return ocr;
+      }catch(error){
+        lastError=error;
+        console.warn('PaddleOCR runtime attempt failed:',attempt.label,error);
+      }
+    }
+    const msg=shortPaddleErrorV55(lastError);
+    setPaddleStatusV55('WASM 초기화',msg,{wasmMode:'all-failed'});
+    throw lastError||new Error('PaddleOCR WASM 런타임 초기화 실패');
+  })().catch(error=>{paddleOcrPromiseV54=null;throw error});
+  return paddleOcrPromiseV54;
+};
+
+function shortPaddleErrorV56(error){
+  const parts=[];
+  let cur=error,depth=0;
+  while(cur&&depth<3){
+    const msg=String(cur?.message||cur||'').replace(/\s+/g,' ').trim();
+    if(msg&&!parts.includes(msg))parts.push(msg);
+    cur=cur?.cause;depth++;
+  }
+  const text=parts.join(' ← ')||'알 수 없는 오류';
+  return text.length>320?text.slice(0,317)+'…':text;
+}
+
+const v55RecognizeScreenshotV56=recognizeScreenshotV42;
+recognizeScreenshotV42=async function(file){
+  pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+  setPaddleStatusV55('모듈 로딩','ORT 1.22.0 고정 빌드');
+  setProgress(2,'PaddleOCR 준비 중','호환되는 WASM 런타임을 확인하고 있습니다.');
+  try{
+    const [ocr,baseImage,posterInfo]=await Promise.all([getPaddleOcrV54(),prepareOcrImageV41(file),prepareExactRgbPosterV52(file)]);
+    const variants=[{label:'paddle-base',image:baseImage},{label:'paddle-rgb',image:posterInfo.image}],candidates=[];
+    setPaddleStatusV55('이미지 추론','PaddleOCR로 스크린샷을 읽고 있습니다.');
+    for(let i=0;i<variants.length;i++){
+      const v=variants[i];
+      setProgress(38+Math.round((i/variants.length)*42),'PaddleOCR로 읽는 중',v.label==='paddle-rgb'?'컬러 포스터화 보정본':'원본 확대본');
+      candidates.push(await runPaddleCandidateV54(ocr,v.image,v.label));
+    }
+    const best=choosePaddleCandidateV54(candidates)||candidates[0];
+    if(!best?.raw?.trim())throw new Error('PaddleOCR가 텍스트를 찾지 못했습니다.');
+    const corrected=correctOcrSpeakerNamesV43(best.raw),finalText=corrected.text;
+    const confidence=Math.max(0,Math.min(100,Number(best.confidence||0)*100));
+    const parsed=setSourceReviewV42({kind:'ocr',fileName:file.name||'스크린샷',text:finalText,confidence,expanded:true});
+    if(sourceReviewV42){
+      sourceReviewV42.corrections=corrected.corrections||[];
+      sourceReviewV42.ocrEngine='PaddleOCR';
+      sourceReviewV42.ocrVariant=best.label==='paddle-rgb'?'컬러 포스터화':'원본 확대';
+      sourceReviewV42.paddleFailureStage='';sourceReviewV42.paddleFailureDetail='';
+      sourceReviewV42.paddleRuntime=paddleStatusV55?.wasmMode||'';
+    }
+    renderSourceReviewV42();setTimeout(()=>$('#sourceReviewText')?.focus(),0);
+    const count=parsed.messages?.length||0,fixes=sourceReviewV42?.corrections?.length||0;
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 PaddleOCR로 찾았습니다.${fixes?` 닉네임 ${fixes}건을 보정했습니다.`:''}`);
+    else toast('PaddleOCR 결과를 확인하고 필요한 부분을 수정해 주세요.','warn',4200);
+    endProgress();if($('#logFile'))$('#logFile').value='';
+  }catch(error){
+    const stage=paddleFailureLabelV55(),detail=shortPaddleErrorV56(error);
+    console.warn(`PaddleOCR ${stage} failed; falling back to Tesseract.`,error);
+    endProgress();
+    toast(`PaddleOCR ${stage} 실패 · 기존 OCR로 다시 시도합니다.`, 'warn', 4600);
+    await v53RecognizeScreenshotV54(file);
+    if(sourceReviewV42?.kind==='ocr'){
+      sourceReviewV42.ocrEngine='Tesseract';sourceReviewV42.ocrVariant='자동 폴백';
+      sourceReviewV42.paddleFailureStage=stage;sourceReviewV42.paddleFailureDetail=detail;
+      renderSourceReviewV42();
+    }
+  }
+};
+
+const v55SourceReviewMetaTextV56=sourceReviewMetaTextV48;
+sourceReviewMetaTextV48=function(){
+  let base=v55SourceReviewMetaTextV56();
+  if(sourceReviewV42?.kind==='ocr'&&sourceReviewV42?.ocrEngine==='PaddleOCR'&&sourceReviewV42?.paddleRuntime){
+    base=[base,sourceReviewV42.paddleRuntime].filter(Boolean).join(' · ');
+  }
+  return base;
+};
+function setupV56Controls(){/* pinned ORT runtime; no extra permanent UI */}
+
+
+
+/* ==== v60 stable OCR baseline: v57 PaddleOCR behavior restored exactly ==== */
+/* ==== v57 standalone-browser PaddleOCR via ppu-paddle-ocr ==== */
+DEFAULT_STATE.version=60;
+const PPU_PADDLE_WEB_V57='https://cdn.jsdelivr.net/npm/ppu-paddle-ocr@6.4.3/web/index.js';
+let ppuPaddlePromiseV57=null;
+let ppuPaddleStatusV57={stage:'대기',detail:'',source:PPU_PADDLE_WEB_V57};
+
+function setPpuPaddleStatusV57(stage,detail=''){
+  ppuPaddleStatusV57={stage,detail,source:PPU_PADDLE_WEB_V57};
+  setPaddleStatusV55?.(stage,detail,{source:PPU_PADDLE_WEB_V57});
+}
+function ppuPaddleFailureLabelV57(){
+  const stage=String(ppuPaddleStatusV57?.stage||'초기화');
+  if(stage.includes('모듈'))return '모듈 로딩';
+  if(stage.includes('모델'))return '한국어 모델 초기화';
+  if(stage.includes('WASM'))return 'WASM 초기화';
+  if(stage.includes('추론'))return '이미지 추론';
+  return stage||'초기화';
+}
+async function getPpuPaddleV57(){
+  if(ppuPaddlePromiseV57)return ppuPaddlePromiseV57;
+  ppuPaddlePromiseV57=(async()=>{
+    setPpuPaddleStatusV57('모듈 로딩','브라우저용 PaddleOCR 모듈을 불러오는 중');
+    setProgress(4,'PaddleOCR 모듈 로딩 중','브라우저용 런타임');
+    let mod;
+    try{mod=await import(PPU_PADDLE_WEB_V57)}catch(error){
+      setPpuPaddleStatusV57('모듈 로딩',shortPaddleErrorV55(error));throw error;
+    }
+    const PaddleOcrService=mod?.PaddleOcrService;
+    const model=mod?.V5_KOREAN_MOBILE_MODEL;
+    if(typeof PaddleOcrService!=='function'){
+      const error=new Error('PaddleOcrService를 찾지 못했습니다.');setPpuPaddleStatusV57('모듈 로딩',error.message);throw error;
+    }
+    if(!model?.detection||!model?.recognition||!model?.charactersDictionary){
+      const error=new Error('PP-OCRv5 한국어 모델 설정을 찾지 못했습니다.');setPpuPaddleStatusV57('한국어 모델 초기화',error.message);throw error;
+    }
+    setPpuPaddleStatusV57('한국어 모델 초기화','PP-OCRv5 한국어·영어 모델을 내려받는 중');
+    setProgress(10,'PaddleOCR 한국어 모델 준비 중','첫 사용 시 모델 다운로드로 시간이 걸릴 수 있습니다.');
+    let service;
+    try{
+      service=new PaddleOcrService({
+        model,
+        processing:{engine:'canvas-native'},
+        session:{executionProviders:['wasm'],graphOptimizationLevel:'all'},
+        recognition:{strategy:'per-line',minimumConfidence:0.12,spaceRecovery:false,recBatchSize:4},
+        debugging:{debug:false,verbose:false}
+      });
+      await service.initialize();
+    }catch(error){
+      const msg=shortPaddleErrorV55(error);
+      setPpuPaddleStatusV57(/wasm|webassembly|onnxruntime|ort/i.test(msg)?'WASM 초기화':'한국어 모델 초기화',msg);
+      try{await service?.destroy?.()}catch{}
+      throw error;
+    }
+    setPpuPaddleStatusV57('준비 완료','PP-OCRv5 한국어·영어');
+    return {service,mod};
+  })().catch(error=>{ppuPaddlePromiseV57=null;throw error});
+  return ppuPaddlePromiseV57;
+}
+async function ocrCanvasFromSourceV57(imageSource){
+  const img=await loadImageForOcrV45(imageSource);
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,img.naturalWidth||img.width||1);canvas.height=Math.max(1,img.naturalHeight||img.height||1);
+  const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,0,0,canvas.width,canvas.height);
+  return canvas;
+}
+function ppuRecognitionRecordV57(item){
+  const text=String(item?.text||'').trim();if(!text)return null;
+  const b=item?.box||item?.bbox||null;
+  let bbox=null;
+  if(b&&Number.isFinite(Number(b.x))&&Number.isFinite(Number(b.y))){
+    bbox={x0:Number(b.x),y0:Number(b.y),x1:Number(b.x)+Number(b.width||0),y1:Number(b.y)+Number(b.height||0)};
+  }
+  return {text,score:Number(item?.confidence??item?.score??0),bbox};
+}
+function ppuResultCandidateV57(result,label){
+  let raw=String(result?.text||'').trim();
+  const records=[];
+  if(Array.isArray(result?.lines)){
+    for(const line of result.lines){
+      const row=(Array.isArray(line)?line:[line]).map(ppuRecognitionRecordV57).filter(Boolean);
+      if(row.length){
+        const text=row.map(x=>x.text).join(' ').replace(/\s+([,.:;!?…])/g,'$1').trim();
+        const score=row.reduce((s,x)=>s+(Number(x.score)||0),0)/row.length;
+        const boxed=row.filter(x=>x.bbox),bbox=boxed.length?{x0:Math.min(...boxed.map(x=>x.bbox.x0)),y0:Math.min(...boxed.map(x=>x.bbox.y0)),x1:Math.max(...boxed.map(x=>x.bbox.x1)),y1:Math.max(...boxed.map(x=>x.bbox.y1))}:null;
+        records.push({text,score,bbox});
+      }
+    }
+  }
+  if(!raw&&records.length)raw=records.map(x=>x.text).join('\n');
+  const normalized=normalizeOcrTextV41(raw),parsedCount=(parseLogHTML(normalized,'ppu-v57')?.messages||[]).length;
+  const weird=weirdnessScoreV50(raw),hangul=(raw.match(/[가-힣]/g)||[]).length;
+  const confidence=Math.max(0,Math.min(1,Number(result?.confidence||0)));
+  const score=confidence+(parsedCount*2)+(hangul*.002)-weird;
+  return {label,raw,normalized,records,confidence,parsedCount,weird,hangul,score};
+}
+async function runPpuPaddleCandidateV57(service,imageSource,label){
+  const canvas=await ocrCanvasFromSourceV57(imageSource);
+  let result;
+  try{result=await service.recognize(canvas,{strategy:'per-line',noCache:true})}
+  catch(error){setPpuPaddleStatusV57('이미지 추론',shortPaddleErrorV55(error));throw error}
+  return ppuResultCandidateV57(result,label);
+}
+function choosePpuPaddleCandidateV57(candidates=[]){
+  if(!candidates.length)return null;
+  const maxParsed=Math.max(...candidates.map(x=>x.parsedCount||0));
+  const pool=candidates.filter(x=>(x.parsedCount||0)===maxParsed);
+  return [...pool].sort((a,b)=>b.score-a.score||a.weird-b.weird||b.hangul-a.hangul)[0];
+}
+
+recognizeScreenshotV42=async function(file){
+  pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+  setPpuPaddleStatusV57('모듈 로딩','');
+  setProgress(2,'PaddleOCR 준비 중','한국어·영어 OCR을 불러오고 있습니다.');
+  try{
+    const [{service},baseImage,posterInfo]=await Promise.all([getPpuPaddleV57(),prepareOcrImageV41(file),prepareExactRgbPosterV52(file)]);
+    const variants=[{label:'ppu-base',image:baseImage},{label:'ppu-rgb',image:posterInfo.image}],candidates=[];
+    setPpuPaddleStatusV57('이미지 추론','스크린샷을 읽는 중');
+    for(let i=0;i<variants.length;i++){
+      const v=variants[i];
+      setProgress(40+Math.round((i/variants.length)*38),'PaddleOCR로 읽는 중',v.label==='ppu-rgb'?'컬러 포스터화 보정본':'원본 확대본');
+      candidates.push(await runPpuPaddleCandidateV57(service,v.image,v.label));
+    }
+    const best=choosePpuPaddleCandidateV57(candidates)||candidates[0];
+    if(!best?.raw?.trim())throw new Error('PaddleOCR가 텍스트를 찾지 못했습니다.');
+    const corrected=correctOcrSpeakerNamesV43(best.raw),finalText=corrected.text;
+    const confidence=Math.round(Math.max(0,Math.min(1,best.confidence||0))*100);
+    const parsed=setSourceReviewV42({kind:'ocr',fileName:file.name||'스크린샷',text:finalText,confidence,expanded:true});
+    if(sourceReviewV42){
+      sourceReviewV42.corrections=corrected.corrections||[];
+      sourceReviewV42.ocrEngine='PaddleOCR (PPU)';
+      sourceReviewV42.ocrVariant=best.label==='ppu-rgb'?'PP-OCRv5 한국어 · 컬러 포스터화':'PP-OCRv5 한국어 · 원본 확대';
+      sourceReviewV42.paddleFailureStage='';sourceReviewV42.paddleFailureDetail='';
+    }
+    renderSourceReviewV42();setTimeout(()=>$('#sourceReviewText')?.focus(),0);
+    const count=parsed.messages?.length||0;
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 PaddleOCR로 찾았습니다.`);
+    else toast('PaddleOCR 결과를 확인하고 필요한 부분을 수정해 주세요.','warn',4200);
+    endProgress();if($('#logFile'))$('#logFile').value='';
+  }catch(error){
+    const stage=ppuPaddleFailureLabelV57(),detail=shortPaddleErrorV55(error);
+    console.warn('PPU PaddleOCR failed; falling back to Tesseract.',stage,detail,error);
+    endProgress();
+    toast(`PaddleOCR ${stage} 실패 · 기존 OCR로 다시 시도합니다.`,'warn',4300);
+    await v53RecognizeScreenshotV54(file);
+    if(sourceReviewV42?.kind==='ocr'){
+      sourceReviewV42.ocrEngine='Tesseract';sourceReviewV42.ocrVariant='자동 폴백';
+      sourceReviewV42.paddleFailureStage=stage;sourceReviewV42.paddleFailureDetail=detail;renderSourceReviewV42();
+    }
+  }
+};
+
+const v56SourceReviewMetaTextV57=sourceReviewMetaTextV48;
+sourceReviewMetaTextV48=function(){
+  const base=v56SourceReviewMetaTextV57();
+  if(sourceReviewV42?.kind!=='ocr')return base;
+  if(sourceReviewV42?.ocrEngine==='PaddleOCR (PPU)')return base;
+  return base;
+};
+function setupV57Controls(){/* standalone browser import map is declared in <head> */}
+
+
+
+/* ==== v61 ellipsis-only visual recovery on stable v57/v60 OCR ==== */
+DEFAULT_STATE.version=61;
+
+function ppuResultCandidateV61(result,label){
+  let raw=String(result?.text||'').trim();
+  const records=[];
+  if(Array.isArray(result?.lines)){
+    for(const line of result.lines){
+      const row=(Array.isArray(line)?line:[line]).map(ppuRecognitionRecordV57).filter(Boolean);
+      if(row.length){
+        const text=row.map(x=>x.text).join(' ').replace(/\s+([,.:;!?…])/g,'$1').trim();
+        const score=row.reduce((s,x)=>s+(Number(x.score)||0),0)/row.length;
+        const boxed=row.filter(x=>x.bbox);
+        const bbox=boxed.length?{x0:Math.min(...boxed.map(x=>x.bbox.x0)),y0:Math.min(...boxed.map(x=>x.bbox.y0)),x1:Math.max(...boxed.map(x=>x.bbox.x1)),y1:Math.max(...boxed.map(x=>x.bbox.y1))}:null;
+        records.push({text,score,bbox,items:row.map(x=>({text:String(x.text||'').trim(),score:Number(x.score)||0,bbox:x.bbox?{...x.bbox}:null})).filter(x=>x.text)});
+      }
+    }
+  }
+  if(!raw&&records.length)raw=records.map(x=>x.text).join('\n');
+  const normalized=normalizeOcrTextV41(raw),parsedCount=(parseLogHTML(normalized,'ppu-v61')?.messages||[]).length;
+  const weird=weirdnessScoreV50(raw),hangul=(raw.match(/[가-힣]/g)||[]).length;
+  const confidence=Math.max(0,Math.min(1,Number(result?.confidence||0)));
+  const score=confidence+(parsedCount*2)+(hangul*.002)-weird;
+  return {label,raw,normalized,records,confidence,parsedCount,weird,hangul,score};
+}
+async function runPpuPaddleCandidateV61(service,imageSource,label){
+  const canvas=await ocrCanvasFromSourceV57(imageSource);
+  let result;
+  try{result=await service.recognize(canvas,{strategy:'per-line',noCache:true})}
+  catch(error){setPpuPaddleStatusV57('이미지 추론',shortPaddleErrorV55(error));throw error}
+  const candidate=ppuResultCandidateV61(result,label);
+  candidate.imageSource=imageSource;
+  return candidate;
+}
+async function getImageDataV61(imageSource){
+  const img=await loadImageForOcrV45(imageSource);
+  const canvas=document.createElement('canvas');canvas.width=Math.max(1,img.naturalWidth||img.width||1);canvas.height=Math.max(1,img.naturalHeight||img.height||1);
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,canvas.width,canvas.height);
+  return {canvas,ctx,imageData:ctx.getImageData(0,0,canvas.width,canvas.height),width:canvas.width,height:canvas.height};
+}
+function componentDotsV61(imageData,width,height,bbox){
+  const x0=Math.max(0,Math.floor(bbox.x0)),y0=Math.max(0,Math.floor(bbox.y0)),x1=Math.min(width,Math.ceil(bbox.x1)),y1=Math.min(height,Math.ceil(bbox.y1));
+  const w=Math.max(1,x1-x0),h=Math.max(1,y1-y0);
+  const data=imageData.data;
+  const mask=new Uint8Array(w*h);
+  for(let y=0;y<h;y++){
+    let oi=((y0+y)*width+x0)*4;
+    for(let x=0;x<w;x++,oi+=4){
+      const r=data[oi],g=data[oi+1],b=data[oi+2];
+      const bright=(Math.max(r,g,b)>=245||((r+g+b)>=600));
+      if(bright)mask[y*w+x]=1;
+    }
+  }
+  const visited=new Uint8Array(w*h),dots=[];
+  const dirs=[-1,0,1];
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const idx=y*w+x;
+    if(!mask[idx]||visited[idx])continue;
+    let queue=[idx],qh=0;visited[idx]=1;
+    let minX=x,maxX=x,minY=y,maxY=y,area=0;
+    while(qh<queue.length){
+      const cur=queue[qh++],cx=cur%w,cy=(cur/w)|0;area++;
+      if(cx<minX)minX=cx;if(cx>maxX)maxX=cx;if(cy<minY)minY=cy;if(cy>maxY)maxY=cy;
+      for(const dy of dirs)for(const dx of dirs){
+        if(!dx&&!dy)continue;const nx=cx+dx,ny=cy+dy;
+        if(nx<0||ny<0||nx>=w||ny>=h)continue;const ni=ny*w+nx;
+        if(mask[ni]&&!visited[ni]){visited[ni]=1;queue.push(ni)}
+      }
+    }
+    const cw=maxX-minX+1,ch=maxY-minY+1,aspect=Math.max(cw,ch)/Math.max(1,Math.min(cw,ch));
+    dots.push({x0:x0+minX,y0:y0+minY,x1:x0+maxX+1,y1:y0+maxY+1,w:cw,h:ch,area,aspect,cx:x0+(minX+maxX+1)/2,cy:y0+(minY+maxY+1)/2});
+  }
+  return dots;
+}
+function detectEllipsisGroupsInLineV61(imageData,width,height,record){
+  const bbox=record?.bbox;if(!bbox)return [];
+  const lineH=Math.max(1,(bbox.y1-bbox.y0));
+  const padded={x0:bbox.x0,y0:bbox.y0-lineH*0.25,x1:bbox.x1,y1:bbox.y1+lineH*0.2};
+  const comps=componentDotsV61(imageData,width,height,padded).filter(c=>{
+    return c.area>=2&&c.area<=Math.max(10,lineH*lineH*0.07)
+      && c.w<=Math.max(4,lineH*0.38)
+      && c.h<=Math.max(4,lineH*0.38)
+      && c.aspect<=2.7
+      && c.cy>=bbox.y0-lineH*0.15&&c.cy<=bbox.y1+lineH*0.15;
+  }).sort((a,b)=>a.cx-b.cx);
+  const groups=[];
+  let current=[];
+  const flush=()=>{
+    if(current.length>=3&&current.length<=8){
+      const xs=current.map(c=>c.cx),ys=current.map(c=>c.cy),span=Math.max(...xs)-Math.min(...xs),avgW=current.reduce((s,c)=>s+c.w,0)/current.length;
+      if(span<=Math.max(lineH*3.8,avgW*(current.length+2))){
+        groups.push({dots:[...current],count:current.length,cx:xs.reduce((s,v)=>s+v,0)/xs.length,cy:ys.reduce((s,v)=>s+v,0)/ys.length,x0:Math.min(...current.map(c=>c.x0)),x1:Math.max(...current.map(c=>c.x1))});
+      }
+    }
+    current=[];
+  };
+  for(const comp of comps){
+    if(!current.length){current=[comp];continue}
+    const prev=current[current.length-1];
+    const dx=comp.cx-prev.cx,dy=Math.abs(comp.cy-prev.cy),sizeRatio=Math.max(comp.w,prev.w)/Math.max(1,Math.min(comp.w,prev.w));
+    if(dx<=Math.max(lineH*0.8,prev.w*3.4)&&dy<=Math.max(2,lineH*0.18)&&sizeRatio<=2.3){current.push(comp)}
+    else {flush();current=[comp]}
+  }
+  flush();
+  return groups;
+}
+function ellipsisStringV61(count){
+  if(count>=5)return '……';
+  return '…';
+}
+function rebuildLineWithEllipsisV61(record,groups,originalLine=''){
+  const items=(record?.items||[]).filter(x=>x?.text&&x?.bbox).sort((a,b)=>a.bbox.x0-b.bbox.x0);
+  if(!items.length||!groups.length)return originalLine||record?.text||'';
+  if(/[.…]{1,}/.test(originalLine||record?.text||''))return originalLine||record?.text||'';
+  const lineH=Math.max(1,(record.bbox?.y1||0)-(record.bbox?.y0||0));
+  const afterMap=new Map();
+  const trailing=[];
+  for(const g of groups){
+    let placed=false;
+    for(let i=0;i<items.length-1;i++){
+      const left=items[i],right=items[i+1];
+      const gapStart=left.bbox.x1-lineH*0.18,gapEnd=right.bbox.x0+lineH*0.18;
+      if(g.cx>=gapStart&&g.cx<=gapEnd){
+        if(!afterMap.has(i))afterMap.set(i,[]);
+        afterMap.get(i).push(g);placed=true;break;
+      }
+    }
+    if(!placed&&g.cx>items[items.length-1].bbox.x1+lineH*0.15&&g.cx<=(record.bbox?.x1||items[items.length-1].bbox.x1)+lineH*0.35)trailing.push(g);
+  }
+  if(!afterMap.size&&!trailing.length)return originalLine||record?.text||'';
+  let out='';
+  const appendToken=(token,needSpace)=>{if(!token)return; if(out&&needSpace&&!/\s$/.test(out))out+=' '; out+=token;};
+  for(let i=0;i<items.length;i++){
+    const item=items[i];
+    const prev=items[i-1];
+    const gapPx=prev?item.bbox.x0-prev.bbox.x1:0;
+    appendToken(item.text,Boolean(prev&&gapPx>lineH*0.35));
+    const groupsHere=(afterMap.get(i)||[]).sort((a,b)=>a.cx-b.cx);
+    if(groupsHere.length){
+      const next=items[i+1];
+      const gapTotal=next?Math.max(0,next.bbox.x0-item.bbox.x1):Math.max(0,(record.bbox?.x1||item.bbox.x1)-item.bbox.x1);
+      const tailSpace=next&&gapTotal>lineH*1.05;
+      out+=groupsHere.map(g=>ellipsisStringV61(g.count)).join('');
+      if(tailSpace)out+=' ';
+    }
+  }
+  if(trailing.length){
+    out+=trailing.sort((a,b)=>a.cx-b.cx).map(g=>ellipsisStringV61(g.count)).join('');
+  }
+  return out.trim()||originalLine||record?.text||'';
+}
+async function applyEllipsisRecoveryV61(text,records,imageSource){
+  const lines=String(text||'').split(/\r?\n/);
+  if(!lines.length||!records?.length||!imageSource)return text;
+  const usable=Math.min(lines.length,records.length);
+  if(!usable)return text;
+  const img=await getImageDataV61(imageSource);
+  let changed=0;
+  for(let i=0;i<usable;i++){
+    const line=lines[i],record=records[i];
+    if(!record?.bbox||/[.…]{1,}/.test(line))continue;
+    const groups=detectEllipsisGroupsInLineV61(img.imageData,img.width,img.height,record);
+    if(!groups.length)continue;
+    const rebuilt=rebuildLineWithEllipsisV61(record,groups,line);
+    if(rebuilt&&rebuilt!==line){lines[i]=rebuilt;changed++;}
+  }
+  return {text:lines.join('\n'),changed};
+}
+
+recognizeScreenshotV42=async function(file){
+  pendingImport=null;clearSourceReviewV42();renderImportTypeChecks();renderParseResult();
+  setPpuPaddleStatusV57('모듈 로딩','');
+  setProgress(2,'PaddleOCR 준비 중','한국어·영어 OCR을 불러오고 있습니다.');
+  try{
+    const [{service},baseImage,posterInfo]=await Promise.all([getPpuPaddleV57(),prepareOcrImageV41(file),prepareExactRgbPosterV52(file)]);
+    const variants=[{label:'ppu-base',image:baseImage},{label:'ppu-rgb',image:posterInfo.image}],candidates=[];
+    setPpuPaddleStatusV57('이미지 추론','스크린샷을 읽는 중');
+    for(let i=0;i<variants.length;i++){
+      const v=variants[i];
+      setProgress(40+Math.round((i/variants.length)*38),'PaddleOCR로 읽는 중',v.label==='ppu-rgb'?'컬러 포스터화 보정본':'원본 확대본');
+      candidates.push(await runPpuPaddleCandidateV61(service,v.image,v.label));
+    }
+    const best=choosePpuPaddleCandidateV57(candidates)||candidates[0];
+    if(!best?.raw?.trim())throw new Error('PaddleOCR가 텍스트를 찾지 못했습니다.');
+    const corrected=correctOcrSpeakerNamesV43(best.raw);
+    let finalText=corrected.text;
+    let ellipsisRecovery={text:finalText,changed:0};
+    try{ellipsisRecovery=await applyEllipsisRecoveryV61(finalText,best.records||[],best.imageSource||'')}catch(error){console.warn('ellipsis recovery failed',error)}
+    finalText=ellipsisRecovery?.text||finalText;
+    const confidence=Math.round(Math.max(0,Math.min(1,best.confidence||0))*100);
+    const parsed=setSourceReviewV42({kind:'ocr',fileName:file.name||'스크린샷',text:finalText,confidence,expanded:true});
+    if(sourceReviewV42){
+      sourceReviewV42.corrections=corrected.corrections||[];
+      sourceReviewV42.ocrEngine='PaddleOCR (PPU)';
+      sourceReviewV42.ocrVariant=best.label==='ppu-rgb'?'PP-OCRv5 한국어 · 컬러 포스터화':'PP-OCRv5 한국어 · 원본 확대';
+      sourceReviewV42.paddleFailureStage='';sourceReviewV42.paddleFailureDetail='';
+      sourceReviewV42.ellipsisRecovered=Number(ellipsisRecovery?.changed||0);
+    }
+    renderSourceReviewV42();setTimeout(()=>$('#sourceReviewText')?.focus(),0);
+    const count=parsed.messages?.length||0;
+    if(count)toast(`${count.toLocaleString('ko-KR')}개 메시지를 PaddleOCR로 찾았습니다.${ellipsisRecovery?.changed?` 말줄임표 ${ellipsisRecovery.changed}줄을 보완했습니다.`:''}`);
+    else toast('PaddleOCR 결과를 확인하고 필요한 부분을 수정해 주세요.','warn',4200);
+    endProgress();if($('#logFile'))$('#logFile').value='';
+  }catch(error){
+    const stage=ppuPaddleFailureLabelV57(),detail=shortPaddleErrorV55(error);
+    console.warn('PPU PaddleOCR failed; falling back to Tesseract.',stage,detail,error);
+    endProgress();
+    toast(`PaddleOCR ${stage} 실패 · 기존 OCR로 다시 시도합니다.`,'warn',4300);
+    await v53RecognizeScreenshotV54(file);
+    if(sourceReviewV42?.kind==='ocr'){
+      sourceReviewV42.ocrEngine='Tesseract';sourceReviewV42.ocrVariant='자동 폴백';
+      sourceReviewV42.paddleFailureStage=stage;sourceReviewV42.paddleFailureDetail=detail;renderSourceReviewV42();
+    }
+  }
+};
+
+const v57SourceReviewMetaTextV61=sourceReviewMetaTextV48;
+sourceReviewMetaTextV48=function(){
+  const base=v57SourceReviewMetaTextV61();
+  if(sourceReviewV42?.kind!=='ocr')return base;
+  const extra=[];
+  if(Number(sourceReviewV42?.ellipsisRecovered||0)>0)extra.push(`말줄임표 보완 ${sourceReviewV42.ellipsisRecovered}줄`);
+  return extra.length?`${base} · ${extra.join(' · ')}`:base;
+};
+function setupV61Controls(){/* ellipsis recovery is automatic after stable OCR */}
+
+
+
+/* ==== v62 robust ellipsis pixel recovery ==== */
+DEFAULT_STATE.version=62;
+
+function detectEllipsisGroupsV62(imageData,width,height,record){
+  const bbox=record?.bbox;if(!bbox)return [];
+  const lineH=Math.max(1,bbox.y1-bbox.y0);
+  const x0=Math.max(0,Math.floor(bbox.x0-lineH*.2));
+  const x1=Math.min(width,Math.ceil(bbox.x1+lineH*8));
+  const y0=Math.max(0,Math.floor(bbox.y0-lineH*.12));
+  const y1=Math.min(height,Math.ceil(bbox.y1+lineH*.62));
+  const w=Math.max(1,x1-x0),h=Math.max(1,y1-y0),src=imageData.data;
+  const mask=new Uint8Array(w*h);
+  for(let y=0;y<h;y++){
+    let si=((y0+y)*width+x0)*4;
+    for(let x=0;x<w;x++,si+=4){
+      const r=src[si],g=src[si+1],b=src[si+2];
+      const lum=.2126*r+.7152*g+.0722*b,max=Math.max(r,g,b),min=Math.min(r,g,b);
+      if(lum>92||(max>115&&max-min>18))mask[y*w+x]=1;
+    }
+  }
+  const visited=new Uint8Array(w*h),comps=[];
+  const dirs=[-1,0,1];
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const ii=y*w+x;if(!mask[ii]||visited[ii])continue;
+    const q=[ii];let qi=0;visited[ii]=1;
+    let minX=x,maxX=x,minY=y,maxY=y,area=0,sumX=0,sumY=0;
+    while(qi<q.length){
+      const cur=q[qi++],cx=cur%w,cy=(cur/w)|0;area++;sumX+=cx;sumY+=cy;
+      if(cx<minX)minX=cx;if(cx>maxX)maxX=cx;if(cy<minY)minY=cy;if(cy>maxY)maxY=cy;
+      for(const dy of dirs)for(const dx of dirs){
+        if(!dx&&!dy)continue;const nx=cx+dx,ny=cy+dy;if(nx<0||ny<0||nx>=w||ny>=h)continue;
+        const ni=ny*w+nx;if(mask[ni]&&!visited[ni]){visited[ni]=1;q.push(ni)}
+      }
+    }
+    const cw=maxX-minX+1,ch=maxY-minY+1;
+    if(area>=2&&area<=Math.max(20,lineH*lineH*.055)&&cw<=Math.max(6,lineH*.30)&&ch<=Math.max(6,lineH*.30)){
+      const cx=x0+sumX/area,cy=y0+sumY/area;
+      if(cy>=bbox.y0+lineH*.48&&cy<=bbox.y1+lineH*.58)comps.push({cx,cy,w:cw,h:ch,area});
+    }
+  }
+  comps.sort((a,b)=>a.cx-b.cx);
+  const candidates=[];
+  for(let start=0;start<comps.length;start++){
+    const run=[comps[start]];
+    for(let j=start+1;j<comps.length;j++){
+      const c=comps[j],prev=run[run.length-1],dx=c.cx-prev.cx,dy=Math.abs(c.cy-prev.cy);
+      if(dx<lineH*.10)continue;
+      if(dx>lineH*.52)break;
+      if(dy<=Math.max(2,lineH*.12)){
+        run.push(c);
+        if(run.length>=3&&run.length<=8){
+          const gaps=[];for(let k=0;k<run.length-1;k++)gaps.push(run[k+1].cx-run[k].cx);
+          const mean=gaps.reduce((s,v)=>s+v,0)/gaps.length;
+          const variance=gaps.reduce((s,v)=>s+(v-mean)*(v-mean),0)/gaps.length;
+          const sd=Math.sqrt(variance);
+          const ySpread=Math.max(...run.map(x=>x.cy))-Math.min(...run.map(x=>x.cy));
+          if(mean>=lineH*.11&&mean<=lineH*.50&&sd<=Math.max(1.4,mean*.22)&&ySpread<=Math.max(2,lineH*.13)){
+            candidates.push({dots:[...run],count:run.length,cx:run.reduce((s,v)=>s+v.cx,0)/run.length,x0:run[0].cx,x1:run[run.length-1].cx});
+          }
+        }
+      }
+    }
+  }
+  candidates.sort((a,b)=>b.count-a.count||a.x0-b.x0);
+  const kept=[];
+  for(const g of candidates){
+    if(kept.some(h=>g.x0>=h.x0-lineH*.08&&g.x1<=h.x1+lineH*.08))continue;
+    kept.push(g);
+  }
+  return kept.sort((a,b)=>a.cx-b.cx);
+}
+function visualCharWeightV62(ch){
+  if(/[가-힣一-龥ぁ-んァ-ン]/.test(ch))return 1;
+  if(/\s/.test(ch))return .52;
+  if(/[A-Za-z0-9]/.test(ch))return .58;
+  if(/[\[\]<>():]/.test(ch))return .40;
+  if(/[.,!?…'"`]/.test(ch))return .28;
+  return .7;
+}
+function visualBoundaryPositionsV62(text,bbox){
+  const chars=[...String(text||'')],weights=chars.map(visualCharWeightV62),total=weights.reduce((s,v)=>s+v,0)||1;
+  const width=Math.max(1,bbox.x1-bbox.x0),positions=[{index:chars.length,x:bbox.x1,type:'end'}];
+  let acc=0;
+  for(let i=0;i<chars.length;i++){
+    const beforeX=bbox.x0+(acc/total)*width;acc+=weights[i];const afterX=bbox.x0+(acc/total)*width;
+    if(chars[i]===' ')positions.push({index:i,x:(beforeX+afterX)/2,type:'space'});
+    if(chars[i]==='>')positions.push({index:i+1,x:afterX,type:'after-angle'});
+    if(/[!?]/.test(chars[i]))positions.push({index:i,x:beforeX,type:'before-punct'});
+  }
+  return positions;
+}
+function insertEllipsisGroupsV62(line,record,groups){
+  if(!groups?.length||!record?.bbox)return line;
+  const chars=[...String(line||'')],lineH=Math.max(1,record.bbox.y1-record.bbox.y0),bounds=visualBoundaryPositionsV62(line,record.bbox),plans=[];
+  for(const g of groups){
+    const dots=g.count>=5?'......':'...';
+    let best=null,bestDist=Infinity;
+    for(const b of bounds){
+      const d=Math.abs(g.cx-b.x);if(d<bestDist){best=b;bestDist=d}
+    }
+    if(!best||bestDist>lineH*3.6)continue;
+    const near=chars.slice(Math.max(0,best.index-6),Math.min(chars.length,best.index+7)).join('');
+    if(/\.{3,}|…/.test(near))continue;
+    plans.push({...best,dots,cx:g.cx});
+  }
+  if(!plans.length)return line;
+  plans.sort((a,b)=>b.index-a.index||b.cx-a.cx);
+  let out=chars;
+  for(const p of plans){
+    if(p.type==='space'){
+      out.splice(p.index,1,...[...p.dots+' ']);
+    }else if(p.type==='before-punct'){
+      out.splice(p.index,0,...[...p.dots]);
+    }else if(p.type==='after-angle'){
+      if(out[p.index]===' ')out.splice(p.index,1,...[...p.dots]);else out.splice(p.index,0,...[...p.dots]);
+    }else{
+      out.splice(p.index,0,...[...p.dots]);
+    }
+  }
+  return out.join('').replace(/\.{9,}/g,'......');
+}
+applyEllipsisRecoveryV61=async function(text,records,imageSource){
+  const lines=String(text||'').split(/\r?\n/);
+  if(!lines.length||!records?.length||!imageSource)return {text,changed:0};
+  const img=await getImageDataV61(imageSource),usable=Math.min(lines.length,records.length);let changed=0,groupsFound=0;
+  for(let i=0;i<usable;i++){
+    const record=records[i];if(!record?.bbox)continue;
+    const groups=detectEllipsisGroupsV62(img.imageData,img.width,img.height,record);if(!groups.length)continue;
+    groupsFound+=groups.length;
+    const rebuilt=insertEllipsisGroupsV62(lines[i],record,groups);
+    if(rebuilt&&rebuilt!==lines[i]){lines[i]=rebuilt;changed++;}
+  }
+  return {text:lines.join('\n'),changed,groupsFound};
+};
+function setupV62Controls(){/* robust ellipsis recovery uses the existing v61 hook */}
+
+
+
+/* ==== v63 ellipsis insertion only in message body + Unicode ellipsis ==== */
+DEFAULT_STATE.version=63;
+
+function bodyStartIndexV63(line=''){
+  const s=String(line||'');
+  const m=s.match(/^(?:\[\d{1,2}:\d{2}(?::\d{2})?\])?(?:\[[^\]\n]+\])?(?:<[^>\n]+>)?\s*/);
+  return m?m[0].length:0;
+}
+function ellipsisStringV63(count){
+  return count>=5?'……':'…';
+}
+const v62InsertEllipsisGroupsV63=insertEllipsisGroupsV62;
+insertEllipsisGroupsV62=function(line,record,groups){
+  if(!groups?.length||!record?.bbox)return line;
+  const original=String(line||'');
+  const chars=[...original],lineH=Math.max(1,record.bbox.y1-record.bbox.y0),bounds=visualBoundaryPositionsV62(original,record.bbox),plans=[];
+  const bodyStart=bodyStartIndexV63(original);
+  const bodyBounds=bounds.filter(b=>b.index>=bodyStart || b.type==='end');
+  for(const g of groups){
+    const dots=ellipsisStringV63(g.count);
+    let best=null,bestDist=Infinity;
+    for(const b of bodyBounds){
+      const d=Math.abs(g.cx-b.x);if(d<bestDist){best=b;bestDist=d}
+    }
+    if(!best||best.index<bodyStart||bestDist>lineH*3.6)continue;
+    const near=chars.slice(Math.max(bodyStart,best.index-6),Math.min(chars.length,best.index+7)).join('');
+    if(/[.…]{1,}/.test(near))continue;
+    plans.push({...best,dots,cx:g.cx});
+  }
+  if(!plans.length)return original;
+  plans.sort((a,b)=>b.index-a.index||b.cx-a.cx);
+  const out=[...chars];
+  for(const p of plans){
+    if(p.index<bodyStart)continue;
+    if(p.type==='space'){
+      out.splice(p.index,1,...[...`${p.dots} `]);
+    }else if(p.type==='before-punct'){
+      out.splice(p.index,0,...[...p.dots]);
+    }else if(p.type==='after-angle'){
+      // protect the metadata header: do not insert immediately after the speaker tag.
+      continue;
+    }else{
+      out.splice(p.index,0,...[...p.dots]);
+    }
+  }
+  return normalizeOcrChatLineV44(out.join('').replace(/…{3,}/g,'……'));
+};
+const v61ApplyEllipsisRecoveryV63=applyEllipsisRecoveryV61;
+applyEllipsisRecoveryV61=async function(text,records,imageSource){
+  const result=await v61ApplyEllipsisRecoveryV63(text,records,imageSource);
+  if(!result||typeof result!=='object')return result;
+  result.text=normalizeOcrTextV41(result.text||'');
+  return result;
+};
+function setupV63Controls(){/* automatic ellipsis recovery stays inline */}
+
+
+
+/* ==== v64 safe OCR cleanup + source-image review ==== */
+DEFAULT_STATE.version=64;
+let sourceReviewImageV64='';
+
+function normalizeKnownOcrChannelV64(label=''){
+  const raw=String(label||'');
+  if(!/(?:서\s*초\s*링|서버\s*초월\s*링크셸|크로스\s*월드\s*링크셸|링크셸|파티|연합|자유\s*부대|초보자|말하기|떠들기|외치기|귓속말)/i.test(raw))return raw.replace(/\s+/g,' ').trim();
+  return normalizeOcrChannelLabelV44(raw);
+}
+function normalizeOcrBodyPunctuationV64(body=''){
+  let s=String(body||'');
+  // Only deterministic punctuation cleanup. Do not infer Korean word spacing.
+  s=s.replace(/!\s+!/g,'!!').replace(/\?\s+\?/g,'??');
+  s=s.replace(/(?:\.\s*){6,}/g,'……').replace(/(?:\.\s*){3,5}/g,'…');
+  s=s.replace(/…\s*…/g,'……');
+  s=s.replace(/\s+([!?.,…])/g,'$1');
+  return s.replace(/[ \t]{2,}/g,' ').trim();
+}
+function normalizeOcrSpeakerWorldV64(inner=''){
+  let s=String(inner||'').replace(/\s+/g,' ').trim();
+  for(const world of OCR_WORLD_NAMES_V44){
+    const re=new RegExp(`([가-힣A-Za-z0-9'’._-])\\s*${world.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}$`);
+    if(re.test(s))s=s.replace(re,`$1 ${world}`);
+  }
+  return s;
+}
+function safeOcrStructureV64(text=''){
+  return String(text||'').replace(/\r\n?/g,'\n').split('\n').map(raw=>{
+    let line=normalizeOcrChatLineV44(raw);
+    // Normalize only the leading channel bracket, never arbitrary brackets in message bodies.
+    line=line.replace(/^(\[\d{1,2}:\d{2}(?::\d{2})?\])?\[([^\]\n]+)\]/,(all,time='',channel)=>`${time}[${normalizeKnownOcrChannelV64(channel)}]`);
+    line=line.replace(/<([^>\n]{1,120})>/,(all,inside)=>`<${normalizeOcrSpeakerWorldV64(inside)}>`);
+    const header=line.match(/^((?:\[\d{1,2}:\d{2}(?::\d{2})?\])?(?:\[[^\]\n]+\])?(?:<[^>\n]+>)?)\s*(.*)$/);
+    if(!header)return line;
+    const prefix=header[1]||'',body=normalizeOcrBodyPunctuationV64(header[2]||'');
+    return body?`${prefix}${prefix?' ':''}${body}`.trim():prefix.trim();
+  }).filter(Boolean).join('\n');
+}
+
+const v63RecognizeScreenshotV64=recognizeScreenshotV42;
+recognizeScreenshotV42=async function(file){
+  const previewPromise=fileToDataURL(file).catch(()=> '');
+  await v63RecognizeScreenshotV64(file);
+  sourceReviewImageV64=await previewPromise;
+  if(sourceReviewV42?.kind==='ocr'){
+    const cleaned=safeOcrStructureV64(sourceReviewV42.text||'');
+    if(cleaned!==sourceReviewV42.text){
+      sourceReviewV42.text=cleaned;
+      const {parsed}=parseSourceReviewV42(sourceReviewV42,cleaned);pendingImport=parsed;
+      renderImportTypeChecks();renderParseResult();
+    }
+    renderSourceReviewV42();
+    setTimeout(()=>$('#sourceReviewText')?.focus(),0);
+  }
+};
+
+const v63ClearSourceReviewV64=clearSourceReviewV42;
+clearSourceReviewV42=function(){sourceReviewImageV64='';return v63ClearSourceReviewV64()};
+
+const v63RenderSourceReviewV64=renderSourceReviewV42;
+renderSourceReviewV42=function(){
+  v63RenderSourceReviewV64();
+  const panel=$('#ocrReviewPanel');
+  if(!panel||sourceReviewV42?.kind!=='ocr'||!sourceReviewV42?.expanded||!sourceReviewImageV64)return;
+  const textarea=panel.querySelector('#sourceReviewText');if(!textarea||panel.querySelector('.source-review-reference-v64'))return;
+  const ref=document.createElement('div');ref.className='source-review-reference-v64';
+  ref.innerHTML=`<button class="source-review-image-v64" type="button" title="원본 크게 보기"><span>원본</span><img src="${escapeHTML(sourceReviewImageV64)}" alt="OCR 원본 스크린샷"></button>`;
+  textarea.insertAdjacentElement('beforebegin',ref);
+};
+function injectV64Styles(){
+  if(document.getElementById('v64-style'))return;
+  const style=document.createElement('style');style.id='v64-style';style.textContent=`
+.source-review-reference-v64{margin-top:10px;margin-bottom:8px;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--panel) 96%,var(--text) 1%)}
+.source-review-image-v64{display:block;position:relative;width:100%;padding:0;border:0;background:transparent;cursor:zoom-in;text-align:left;overflow:auto;max-height:210px}
+.source-review-image-v64 img{display:block;max-width:100%;height:auto;margin:0 auto}
+.source-review-image-v64 span{position:absolute;z-index:1;left:7px;top:7px;padding:3px 7px;border-radius:999px;background:rgba(20,22,28,.72);color:#fff;font-size:10px;font-weight:800;pointer-events:none}
+.ocr-review-text{min-height:240px;max-height:46vh}
+.source-review-lightbox-v64{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;padding:28px;background:rgba(0,0,0,.78);cursor:zoom-out}
+.source-review-lightbox-v64.open{display:flex}.source-review-lightbox-v64 img{max-width:min(96vw,1800px);max-height:92vh;object-fit:contain;image-rendering:auto;box-shadow:0 18px 70px rgba(0,0,0,.35)}
+@media(max-width:680px){.source-review-image-v64{max-height:160px}.ocr-review-text{min-height:220px;max-height:42vh}.source-review-lightbox-v64{padding:10px}}
+`;
+  document.head.append(style);
+}
+function ensureSourceReviewLightboxV64(){
+  let box=$('#sourceReviewLightboxV64');if(box)return box;
+  box=document.createElement('div');box.id='sourceReviewLightboxV64';box.className='source-review-lightbox-v64';box.setAttribute('aria-hidden','true');
+  box.innerHTML='<img alt="OCR 원본 스크린샷 확대">';document.body.append(box);return box;
+}
+function setupV64Controls(){
+  injectV64Styles();const box=ensureSourceReviewLightboxV64();
+  const panel=ensureOcrReviewPanelV41();
+  panel?.addEventListener('click',e=>{
+    const btn=e.target instanceof Element?e.target.closest('.source-review-image-v64'):null;if(!btn)return;
+    const img=btn.querySelector('img');if(!img?.src)return;
+    const target=box.querySelector('img');target.src=img.src;box.classList.add('open');box.setAttribute('aria-hidden','false');
+  });
+  box.addEventListener('click',()=>{box.classList.remove('open');box.setAttribute('aria-hidden','true');box.querySelector('img').removeAttribute('src')});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&box.classList.contains('open')){box.click()}});
 }
 
 async function init(){
   bindEvents();setupV5Controls();setupV8ImageHandling();setupOutgoingTellSetting();
   const saved=await dbGet();let oldVersion=0;
   if(saved&&saved.settings&&Array.isArray(saved.members)&&Array.isArray(saved.messages)){oldVersion=Number(saved.version||0);state={...structuredClone(DEFAULT_STATE),...saved,settings:{...DEFAULT_STATE.settings,...saved.settings},speakerProfiles:{...(saved.speakerProfiles||{})},archivedMembers:{...(saved.archivedMembers||{})}};if(oldVersion<5&&state.settings.fontPreset==='system')state.settings.fontPreset='pretendard'}
-  ensureSettings();ensureCompactState();if(oldVersion<33)migrateWorldSpeakerIdentities();cleanupSpeakerMemoryArtifacts();migrateStableSpeakerIdentities();state.version=40;cleanStoredEmotes();seedSpeakerProfiles();
+  ensureSettings();ensureCompactState();if(oldVersion<33)migrateWorldSpeakerIdentities();cleanupSpeakerMemoryArtifacts();migrateStableSpeakerIdentities();state.version=64;cleanStoredEmotes();seedSpeakerProfiles();
   if(oldVersion&&oldVersion<8){const count=await optimizeStoredImages();if(count)toast(`기존 이미지 ${count.toLocaleString('ko-KR')}개를 128px 기준으로 최적화했습니다.`)}
   viewTypes=new Set(state.messages.map(m=>m.type));viewMembers=new Set(state.messages.map(m=>m.memberId));renderAll(true);syncMobileTabs();updateAvatarPreview();
 }
 
-init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();setupV27Controls();setupV30Controls();setupV31Controls();setupV33Controls();setupV34Controls();setupV35Controls();setupV36Controls();setupV37Controls();setupV38Controls();setupV39Controls();setupV40Controls();updateMinimalCopy();});
+init().then(()=>{setupV15ManualItemControls();setupV16Controls();setupV17Controls();setupV18Controls();setupV19Controls();setupV21Controls();setupV22Controls();setupV23Controls();setupV24Controls();setupV25Controls();setupV27Controls();setupV30Controls();setupV31Controls();setupV33Controls();setupV34Controls();setupV35Controls();setupV36Controls();setupV37Controls();setupV38Controls();setupV39Controls();setupV40Controls();updateMinimalCopy();setupV41Controls();setupV42Controls();setupV43Controls();setupV45Controls();setupV46Controls();setupV47Controls();setupV48Controls();setupV49Controls();setupV50Controls();setupV51Controls();setupV52Controls();setupV53Controls();setupV54Controls();setupV55Controls();setupV56Controls();setupV57Controls();setupV63Controls();setupV64Controls();});
 })();
 </script>
 </body>
